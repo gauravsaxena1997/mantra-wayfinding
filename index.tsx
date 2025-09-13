@@ -34,29 +34,6 @@ Maintain a no-repeat buffer of 30 across {quote text, author, book, scene type, 
 AUTHOR/BOOK GUARDRAILS (examples, not exhaustive)
 James Clear (Atomic Habits), Cal Newport (Deep Work), Carol Dweck (Mindset), Stephen R. Covey, Viktor Frankl, Angela Duckworth, Ryan Holiday, Marcus Aurelius, Seneca, Epictetus, Thich Nhat Hanh, Maya Angelou, Emerson, William James, Oliver Burkeman, Naval Ravikant (Almanack). Use only short, widely cited lines with clear attribution.
 
-OUTPUT CONTRACT — RETURN ONLY VALID JSON (no prose):
-{
-"spec_id": "string",
-"mode": "AUTO | MANUAL",
-"alt_text": "string",
-"quote": { "text": "string", "author": "string", "source_book": "string", "verified": true },
-"background": {
-  "vibe": "urban | nature | coastal | mountain | forest | riverside | desert | snowy | night_city | suburban | industrial | minimal_studio | metro_transit | cafe | gallery",
-  "scene": "string",
-  "surface": "string",
-  "lighting": "string",
-  "weather": "string",
-  "people": "string",
-  "style": "string",
-  "image_prompt": "string"
-},
-"placement": { "mode": "poster | board | sign | screen | book_cover | open_book_page | mural_panel | building_billboard | bus_stop_lightbox | subway_billboard | cafe_chalkboard | photo_booth_strip | street_sticker_panel | construction_notice_board | gallery_frame | wayfinding_totem" },
-"typography": { "watermark_handle": "@mantra.wayfinding" },
-"caption": "string",
-"hashtags": ["#string", "#string", "#string"],
-"notes": "string"
-}
-
 IMAGE GENERATION TEMPLATE (internal guidance)
 "Photorealistic {vibe} {scene} featuring a clear {placement.mode} sized for a 3:4 poster area.
 Lighting: {lighting}. Weather/mood: {weather}. People: {people} (no identifiable faces).
@@ -73,7 +50,9 @@ SELF-CHECKS (must pass before responding)
 - Attribution verified + ≤25 words (else swap).
 - Only the quote + watermark will be readable in the final composition.
 - Text sits on a real in-scene surface, perspective-correct.
-- JSON schema is exact; no extra chatter.
+- The generated JSON will strictly adhere to the schema.
+
+OUTPUT CONTRACT: Return only a valid JSON object that adheres to the provided schema. Do not include any other text, prose, or markdown formatting in your response.
 `;
 
 const responseSchema = {
@@ -179,7 +158,11 @@ function App() {
                     responseSchema: responseSchema,
                 },
             });
-            spec = JSON.parse(specResponse.text);
+
+            if (!specResponse.text || specResponse.text.trim() === '') {
+                 throw new Error("The model returned an empty response for the spec generation. This could be due to a content safety policy. Please try a different prompt.");
+            }
+            spec = JSON.parse(specResponse.text.trim());
         }
 
         setOutput(spec);
