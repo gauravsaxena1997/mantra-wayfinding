@@ -117,8 +117,16 @@ const responseSchema = {
 
 
 type Mode = 'AUTO' | 'MANUAL' | 'JSON';
+type Page = 'generate' | 'saved';
+type Theme = 'light' | 'dark';
 
 function App() {
+  // UI State
+  const [activePage, setActivePage] = useState<Page>('generate');
+  const [theme, setTheme] = useState<Theme>('dark');
+  const [userApiKey, setUserApiKey] = useState('');
+
+  // Generation State
   const [mode, setMode] = useState<Mode>('AUTO');
   const [manualInputs, setManualInputs] = useState({ quote: '', author: '', source: '' });
   const [jsonInput, setJsonInput] = useState('');
@@ -156,8 +164,17 @@ function App() {
     localStorage.setItem('mantraAuthorHistory', JSON.stringify(authorHistory));
   }, [quoteHistory, authorHistory]);
 
+  // Effect to apply theme class to the root element
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('theme-light', 'theme-dark');
+    root.classList.add(`theme-${theme}`);
+  }, [theme]);
 
-  const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.API_KEY }), []);
+  const ai = useMemo(() => {
+    const key = userApiKey.trim() || process.env.API_KEY;
+    return new GoogleGenAI({ apiKey: key });
+  }, [userApiKey]);
 
   const handleGenerate = async () => {
     setIsLoading(true);
@@ -323,133 +340,179 @@ Return ONLY the final composited image. Failure to follow these rules will resul
     }
   };
 
+  const toggleTheme = () => {
+    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+  };
+
   return (
-    <>
-        <header>
-            <h1>Mantra Wayfinding</h1>
-            <p>Instant Instagram Quote Image Generator</p>
-        </header>
-        <div className="app-container">
-            <div className="controls-panel">
-                <h2>Controls</h2>
-                
-                <div className="control-group">
-                    <h3 className="control-group-title">Watermark</h3>
-                    <div className="form-group">
-                        <label htmlFor="watermark-text">Watermark Text</label>
-                        <input id="watermark-text" type="text" value={watermarkText} onChange={e => setWatermarkText(e.target.value)} />
-                    </div>
-                     <div className="form-group">
-                        <label htmlFor="watermark-placement">Watermark Placement</label>
-                        <select id="watermark-placement" value={watermarkPlacement} onChange={e => setWatermarkPlacement(e.target.value)}>
-                            <option>Bottom - Right</option>
-                            <option>Bottom - Left</option>
-                            <option>Top - Right</option>
-                            <option>Top - Left</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div className="control-group">
-                    <h3 className="control-group-title">Mode</h3>
-                    <div className="tabs">
-                        {(['AUTO', 'MANUAL', 'JSON'] as Mode[]).map(m => (
-                            <button key={m} className={`tab ${mode === m ? 'active' : ''}`} onClick={() => setMode(m)}>
-                                {m.charAt(0) + m.slice(1).toLowerCase()}
-                            </button>
-                        ))}
-                    </div>
-
-                    {mode === 'MANUAL' && (
-                        <div className="form-group">
-                            <label htmlFor="quote">Custom Quote</label>
-                            <textarea id="quote" value={manualInputs.quote} onChange={e => setManualInputs({...manualInputs, quote: e.target.value})} />
-                            <label htmlFor="author">Author</label>
-                            <input id="author" type="text" value={manualInputs.author} onChange={e => setManualInputs({...manualInputs, author: e.target.value})} />
-                            <label htmlFor="source">Source</label>
-                            <input id="source" type="text" value={manualInputs.source} onChange={e => setManualInputs({...manualInputs, source: e.target.value})} />
-                        </div>
-                    )}
-                    {mode === 'JSON' && (
-                        <div className="form-group">
-                            <label htmlFor="json">JSON Spec</label>
-                            <textarea id="json" value={jsonInput} onChange={e => setJsonInput(e.target.value)} />
-                        </div>
-                    )}
-                </div>
-
-                <button onClick={handleGenerate} disabled={isLoading}>
-                    {isLoading ? 'Generating...' : 'Generate Asset'}
-                </button>
+    <div className="shell">
+      <nav className="main-nav">
+        <div className="nav-left">
+          <div className="nav-title">Mantra Wayfinding</div>
+          <a href="#" className={activePage === 'generate' ? 'active' : ''} onClick={() => setActivePage('generate')}>Generate</a>
+          <a href="#" className={activePage === 'saved' ? 'active' : ''} onClick={() => setActivePage('saved')}>Saved</a>
+        </div>
+        <div className="nav-right">
+            <div className="theme-switcher">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+                </svg>
+                <label className="switch">
+                    <input type="checkbox" checked={theme === 'dark'} onChange={toggleTheme} />
+                    <span className="slider round"></span>
+                </label>
+                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                </svg>
             </div>
-
-            <div className="output-panel">
-                {isLoading && (
-                    <div className="loading-indicator">
-                        <div className="spinner"></div>
-                        <p>{loadingMessage}</p>
-                    </div>
-                )}
-                {error && <div className="error-message">{error}</div>}
-                {!isLoading && !error && !output && (
-                    <div className="placeholder">
-                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                        </svg>
-                        <p>Your generated asset will appear here.</p>
-                    </div>
-                )}
-                {output && (
-                    <div className="generated-content">
-                         <div className="result-image-wrapper">
-                            <div className="image-container">
-                                {generatedImageUrl && <img src={generatedImageUrl} alt={output.alt_text} />}
+        </div>
+      </nav>
+      <main className="main-content">
+        {activePage === 'generate' ? (
+            <>
+                <div className="controls-panel">
+                    <div className="controls-scroller">
+                        <div className="control-group">
+                            <h3 className="control-group-title">API Key</h3>
+                            <div className="form-group">
+                                <label htmlFor="api-key">Your Gemini API Key</label>
+                                <input
+                                    id="api-key"
+                                    type="password"
+                                    value={userApiKey}
+                                    onChange={e => setUserApiKey(e.target.value)}
+                                    placeholder="Defaults to shared key"
+                                />
+                                <p className="api-key-info">
+                                    Using your own key can help avoid rate limits. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Get a key from Google AI Studio</a>.
+                                </p>
                             </div>
-                            {generatedImageUrl && (
-                                <div className="action-buttons">
-                                    <button className="action-button" onClick={handleViewImage}>View</button>
-                                    <button className="action-button" onClick={handleDownloadImage}>Download</button>
+                        </div>
+
+                        <div className="control-group">
+                            <h3 className="control-group-title">Watermark</h3>
+                            <div className="form-group">
+                                <label htmlFor="watermark-text">Watermark Text</label>
+                                <input id="watermark-text" type="text" value={watermarkText} onChange={e => setWatermarkText(e.target.value)} />
+                            </div>
+                             <div className="form-group">
+                                <label htmlFor="watermark-placement">Watermark Placement</label>
+                                <select id="watermark-placement" value={watermarkPlacement} onChange={e => setWatermarkPlacement(e.target.value)}>
+                                    <option>Bottom - Right</option>
+                                    <option>Bottom - Left</option>
+                                    <option>Top - Right</option>
+                                    <option>Top - Left</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="control-group">
+                            <h3 className="control-group-title">Mode</h3>
+                            <div className="tabs">
+                                {(['AUTO', 'MANUAL', 'JSON'] as Mode[]).map(m => (
+                                    <button key={m} className={`tab ${mode === m ? 'active' : ''}`} onClick={() => setMode(m)}>
+                                        {m.charAt(0) + m.slice(1).toLowerCase()}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {mode === 'MANUAL' && (
+                                <div className="form-group">
+                                    <label htmlFor="quote">Custom Quote</label>
+                                    <textarea id="quote" value={manualInputs.quote} onChange={e => setManualInputs({...manualInputs, quote: e.target.value})} />
+                                    <label htmlFor="author">Author</label>
+                                    <input id="author" type="text" value={manualInputs.author} onChange={e => setManualInputs({...manualInputs, author: e.target.value})} />
+                                    <label htmlFor="source">Source</label>
+                                    <input id="source" type="text" value={manualInputs.source} onChange={e => setManualInputs({...manualInputs, source: e.target.value})} />
+                                </div>
+                            )}
+                            {mode === 'JSON' && (
+                                <div className="form-group">
+                                    <label htmlFor="json">JSON Spec</label>
+                                    <textarea id="json" value={jsonInput} onChange={e => setJsonInput(e.target.value)} />
                                 </div>
                             )}
                         </div>
-                        <div className="text-outputs">
-                             <div className="form-group">
-                                <label>Caption</label>
-                                <button className="copy-button" onClick={() => handleCopy(formattedCaption)}>Copy</button>
-                                <textarea id="caption-output" readOnly value={formattedCaption}></textarea>
+                    </div>
+                     <button className="generate-button" onClick={handleGenerate} disabled={isLoading}>
+                        {isLoading ? 'Generating...' : 'Generate Asset'}
+                    </button>
+                </div>
+
+                <div className="output-panel">
+                    {isLoading && (
+                        <div className="loading-indicator">
+                            <div className="spinner"></div>
+                            <p>{loadingMessage}</p>
+                        </div>
+                    )}
+                    {error && <div className="error-message">{error}</div>}
+                    {!isLoading && !error && !output && (
+                        <div className="placeholder">
+                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                            </svg>
+                            <p>Your generated asset will appear here.</p>
+                        </div>
+                    )}
+                    {output && (
+                        <div className="generated-content">
+                             <div className="result-image-wrapper">
+                                <div className="image-container">
+                                    {generatedImageUrl && <img src={generatedImageUrl} alt={output.alt_text} />}
+                                </div>
+                                {generatedImageUrl && (
+                                    <div className="action-buttons">
+                                        <button className="action-button" onClick={handleViewImage}>View</button>
+                                        <button className="action-button" onClick={handleDownloadImage}>Download</button>
+                                    </div>
+                                )}
                             </div>
-                              <div className="form-group">
-                                <label>Alt Text</label>
-                                <button className="copy-button" onClick={() => handleCopy(output.alt_text)}>Copy</button>
-                                <textarea readOnly value={output.alt_text}></textarea>
-                            </div>
-                             <div className="generation-parameters">
-                                <h3>Used Parameters</h3>
-                                <p><strong>Placement Mode:</strong> {output.background.quotePlacement}</p>
-                                <p><strong>Vibe:</strong> {output.background.vibe}</p>
-                                <p><strong>Scene:</strong> {output.background.scene}</p>
-                                <p><strong>Lighting:</strong> {output.background.lighting}</p>
-                                <p><strong>Style:</strong> {output.background.style}</p>
-                             </div>
-                             <div className="form-group">
-                                <label>Generated JSON Spec</label>
-                                <button className="copy-button" onClick={() => handleCopy(JSON.stringify(output, null, 2))}>Copy</button>
-                                <textarea id="json-output" readOnly value={output ? JSON.stringify(output, null, 2) : ''}></textarea>
+                            <div className="text-outputs">
+                                 <div className="form-group">
+                                    <label>Caption</label>
+                                    <button className="copy-button" onClick={() => handleCopy(formattedCaption)}>Copy</button>
+                                    <textarea id="caption-output" readOnly value={formattedCaption}></textarea>
+                                </div>
+                                  <div className="form-group">
+                                    <label>Alt Text</label>
+                                    <button className="copy-button" onClick={() => handleCopy(output.alt_text)}>Copy</button>
+                                    <textarea readOnly value={output.alt_text}></textarea>
+                                </div>
+                                 <div className="generation-parameters">
+                                    <h3>Used Parameters</h3>
+                                    <p><strong>Placement Mode:</strong> {output.background.quotePlacement}</p>
+                                    <p><strong>Vibe:</strong> {output.background.vibe}</p>
+                                    <p><strong>Scene:</strong> {output.background.scene}</p>
+                                    <p><strong>Lighting:</strong> {output.background.lighting}</p>
+                                    <p><strong>Style:</strong> {output.background.style}</p>
+                                 </div>
+                                 <div className="form-group">
+                                    <label>Generated JSON Spec</label>
+                                    <button className="copy-button" onClick={() => handleCopy(JSON.stringify(output, null, 2))}>Copy</button>
+                                    <textarea id="json-output" readOnly value={output ? JSON.stringify(output, null, 2) : ''}></textarea>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
-            </div>
-        </div>
-        {isModalOpen && (
-            <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                    <button className="modal-close" onClick={() => setIsModalOpen(false)} aria-label="Close" type="button">&times;</button>
-                    <img src={generatedImageUrl} alt={output.alt_text} />
+                    )}
                 </div>
+            </>
+        ) : (
+            <div className="placeholder-page">
+                <h2>Saved Assets</h2>
+                <p>This feature will be implemented later.</p>
             </div>
         )}
-    </>
+      </main>
+      {isModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <button className="modal-close" onClick={() => setIsModalOpen(false)} aria-label="Close" type="button">&times;</button>
+                <img src={generatedImageUrl} alt={output.alt_text} />
+            </div>
+        </div>
+      )}
+    </div>
   );
 }
 
