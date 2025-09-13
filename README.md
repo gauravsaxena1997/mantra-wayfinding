@@ -17,6 +17,7 @@ The application leverages a sophisticated multi-step AI pipeline using the Googl
 -   **3-Stage Generation Pipeline**: A robust process that separates creative direction (spec generation) from asset creation (image generation and composition) for superior results.
 -   **Strict Quality Control**: The entire system is governed by a set of non-negotiable `strict_guidelines` and a curated `Placement Modes Enum` to ensure all outputs are brand-safe, aesthetically consistent, and highly legible.
 -   **Hyper-Realistic Text Integration**: The final composition step focuses on physical simulation, making the quote appear naturally part of the scene (e.g., carved, painted, projected) rather than a simple text overlay.
+-   **Persistent Anti-Repetition**: The application uses `localStorage` to remember all generated quotes and the last 10 authors, ensuring that users receive fresh, unique content across sessions and preventing sequential duplicates.
 -   **User-Configurable Controls**: The UI provides options to customize the watermark text and placement, which are strictly enforced on the final image.
 
 ---
@@ -27,7 +28,7 @@ The application's logic is built on a 3-step pipeline that uses the JSON `spec` 
 
 ### Step 1: Specification Generation (The "Blueprint")
 -   **Model**: `gemini-2.5-flash`
--   **Process**: Based on the user's selected mode (`AUTO` or `MANUAL`), the application sends a request to the Gemini model. This request is governed by the `SYSTEM_PROMPT`, which contains the full list of rules, placement enums, and the required JSON schema.
+-   **Process**: Based on the user's selected mode (`AUTO` or `MANUAL`), the application sends a request to the Gemini model. This request is dynamically enhanced with a history of previously generated quotes and authors from the user's `localStorage` to enforce anti-repetition rules. The request is governed by the `SYSTEM_PROMPT`, which contains the full list of rules, placement enums, and the required JSON schema.
 -   **Output**: The model's sole task is to act as a creative director and return a single, valid JSON `spec` object. This object contains every piece of information needed for the subsequent steps, from the quote text to the detailed image prompt and caption. This is the most critical creative step.
 
 ### Step 2: Background Image Generation (The "Canvas")
