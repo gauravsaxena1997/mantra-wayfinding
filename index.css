@@ -253,6 +253,12 @@ button:disabled {
   min-height: 100px;
 }
 
+#caption-output,
+#json-output {
+  min-height: 180px;
+}
+
+
 .copy-button {
   position: absolute;
   top: 0.5rem;

@@ -233,7 +233,7 @@ function App() {
         
         // Format the final caption
         const { quote, caption, hashtags } = spec;
-        const finalCaption = `${quote.text}\n\n${caption}\n\n${quote.author}\n${quote.source_book}\n\n${hashtags.join(' ')}`;
+        const finalCaption = `${quote.text}\n\n${caption}\n\nAuthor: ${quote.author}\nSource: ${quote.source_book}\n\n${hashtags.join(' ')}`;
         setFormattedCaption(finalCaption);
 
 
@@ -316,7 +316,7 @@ function App() {
                              <div className="form-group">
                                 <label>Caption</label>
                                 <button className="copy-button" onClick={() => handleCopy(formattedCaption)}>Copy</button>
-                                <textarea readOnly value={formattedCaption}></textarea>
+                                <textarea id="caption-output" readOnly value={formattedCaption}></textarea>
                             </div>
                               <div className="form-group">
                                 <label>Alt Text</label>
@@ -326,7 +326,7 @@ function App() {
                              <div className="form-group">
                                 <label>Generated JSON Spec</label>
                                 <button className="copy-button" onClick={() => handleCopy(JSON.stringify(output, null, 2))}>Copy</button>
-                                <textarea readOnly value={output ? JSON.stringify(output, null, 2) : ''}></textarea>
+                                <textarea id="json-output" readOnly value={output ? JSON.stringify(output, null, 2) : ''}></textarea>
                             </div>
                         </div>
                     </div>
