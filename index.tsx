@@ -20,13 +20,14 @@ OPERATING MODES
 
 NON-NEGOTIABLE IMAGE/TEXT POLICY
 
-1. Only readable text in the image:
+1. MAXIMUM READABILITY IS THE #1 PRIORITY: The quote is the hero. The surface for the text must be clear, well-lit, and angled for easy reading (e.g., mostly front-facing, avoiding steep perspective angles greater than 45 degrees). The final text must be instantly legible.
+2. Only readable text in the image:
 a) the quote, and
 b) a tiny watermark handle.
 If the scene contains signage/posters/labels, render them blank or make them illegible via angle, distance, depth of field, texture/noise. Never show ratios/prompts/seeds/model names/“3:4”/numbers in the image.
-2. Real surface placement: quote must appear printed/painted on a physical surface in-scene (not floating), with correct perspective, texture, shadows/reflections.
-3. Legibility: bold modern sans; high contrast; watermark = @mantra.wayfinding bottom-right, subtle.
-4. Safety: no brands/logos/celebrities/political symbols/profane or sensitive imagery.
+3. Real surface placement: quote must appear printed/painted on a physical surface in-scene (not floating), with correct perspective, texture, shadows/reflections.
+4. Legibility: bold modern sans; high contrast; watermark = @mantra.wayfinding bottom-right, subtle.
+5. Safety: no brands/logos/celebrities/political symbols/profane or sensitive imagery.
 
 ANTI-REPETITION (AUTO)
 Maintain a no-repeat buffer of 30 across {quote text, author, book, scene type, vibe}. If collision, pivot.
@@ -42,11 +43,12 @@ STRICT RULES:
 - The ONLY readable text in the final image must be the printed quote + tiny watermark.
 - Any environmental signage/labels must be blank or illegible via angle/blur/distance.
 - Do NOT show ratios, seeds, prompts, or numbers anywhere in the image.
-- The {placement.mode} surface must be perspective-correct with real texture (paper/board/glass/paint) and realistic shadows/reflections.
+- The {placement.mode} surface must be flat, well-lit, mostly front-facing (less than 45-degree angle to the camera) for maximum text readability. It must have realistic shadows/reflections.
 - Output 1080x1440 (3:4).
 - Return the surface BLANK, ready for text placement. Color grade: {style}. Natural, brand-safe, documentary feel."
 
 SELF-CHECKS (must pass before responding)
+- Readability is prioritized: Is the surface positioned for easy reading?
 - Attribution verified + ≤25 words (else swap).
 - Only the quote + watermark will be readable in the final composition.
 - Text sits on a real in-scene surface, perspective-correct.
@@ -122,6 +124,8 @@ function App() {
   const [output, setOutput] = useState<any | null>(null);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [formattedCaption, setFormattedCaption] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
 
   const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.API_KEY }), []);
 
@@ -216,7 +220,8 @@ function App() {
         
         // Format the final caption
         const { quote, caption, hashtags } = spec;
-        const finalCaption = `${quote.text}\n\n${caption}\n\nAuthor: ${quote.author}\nSource: ${quote.source_book}\n\n${hashtags.join(' ')}`;
+        const formattedHashtags = hashtags.map(h => `#${h.replace(/#/g, '')}`).join(' ');
+        const finalCaption = `${quote.text}\n\n${caption}\n\nAuthor: ${quote.author}\nSource: ${quote.source_book}\n\n${formattedHashtags}`;
         setFormattedCaption(finalCaption);
 
 
@@ -233,6 +238,22 @@ function App() {
       navigator.clipboard.writeText(text).then(() => {
           // Could show a "Copied!" notification
       });
+  };
+
+  const handleViewImage = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleDownloadImage = () => {
+    if (generatedImageUrl) {
+        const link = document.createElement('a');
+        link.href = generatedImageUrl;
+        const fileName = output?.spec_id ? `mantra_${output.spec_id}.png` : 'mantra_wayfinding.png';
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
   };
 
   return (
@@ -292,8 +313,16 @@ function App() {
                 )}
                 {output && (
                     <div className="generated-content">
-                        <div className="image-container">
-                            {generatedImageUrl && <img src={generatedImageUrl} alt={output.alt_text} />}
+                         <div className="result-image-wrapper">
+                            <div className="image-container">
+                                {generatedImageUrl && <img src={generatedImageUrl} alt={output.alt_text} />}
+                            </div>
+                            {generatedImageUrl && (
+                                <div className="action-buttons">
+                                    <button className="action-button" onClick={handleViewImage}>View</button>
+                                    <button className="action-button" onClick={handleDownloadImage}>Download</button>
+                                </div>
+                            )}
                         </div>
                         <div className="text-outputs">
                              <div className="form-group">
@@ -316,6 +345,14 @@ function App() {
                 )}
             </div>
         </div>
+        {isModalOpen && (
+            <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <button className="modal-close" onClick={() => setIsModalOpen(false)} aria-label="Close" type="button">&times;</button>
+                    <img src={generatedImageUrl} alt={output.alt_text} />
+                </div>
+            </div>
+        )}
     </>
   );
 }

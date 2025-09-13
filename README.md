@@ -6,7 +6,7 @@ This document provides a comprehensive guide to the image generation process for
 
 The generator operates on a set of non-negotiable principles to ensure high-quality, brand-safe, and effective content.
 
--   **Legibility First**: The motivational quote is the most important element. It must always be perfectly readable, with high contrast against its background.
+-   **Readability Above All**: The quote is the hero of the image. Its legibility is the primary goal, overriding other aesthetic considerations if they conflict. The text must be instantly and effortlessly readable.
 -   **Realistic Integration**: The quote should appear naturally integrated into the scene on a physical surface, respecting the laws of perspective.
 -   **Aesthetic Consistency**: All generated images should have a clean, modern, and photorealistic feel.
 -   **Brand Safety**: No logos, recognizable brands, celebrities, political symbols, or sensitive content is ever permitted.
@@ -20,7 +20,7 @@ The generation process is multi-step, starting with the creation of a "spec" and
 
 ### Background Image Prompt Template
 
-The prompt to generate the background image (`imagen-4.0-generate-001`) follows a consistent template:
+The prompt to generate the background image (`imagen-4.0-generate-001`) follows a consistent template with strict rules to ensure readability:
 
 `"Photorealistic {vibe} {scene} featuring a clear {placement.mode} sized for a 3:4 poster area. Lighting: {lighting}. Weather/mood: {weather}. People: {people} (no identifiable faces)."`
 
@@ -33,7 +33,10 @@ Each variable is filled in from the generated JSON `spec`:
 -   `{weather}`: The atmospheric conditions. (e.g., "calm," "rainy," "overcast," "sunny")
 -   `{people}`: Describes the presence of humans. Faces must never be identifiable. (e.g., "none," "a single person out of focus in the background")
 
-**Strict Rule**: The model is instructed to return this background image with the designated surface left **BLANK**, ready for the text composition step.
+**Strict Rules for Readability**:
+-   The model is instructed to render the placement surface as **flat, well-lit, and mostly front-facing**.
+-   A crucial constraint is that the surface **must not be angled more than 45 degrees** relative to the camera, preventing extreme perspectives that make text hard to read.
+-   The model must return this background image with the designated surface left **BLANK**, ready for the text composition step.
 
 ---
 
@@ -42,8 +45,8 @@ Each variable is filled in from the generated JSON `spec`:
 Once the blank background is generated, a second model (`gemini-2.5-flash-image-preview`) composites the text onto the image.
 
 -   **Aspect Ratio**: All images are generated in a **3:4 aspect ratio (1080x1440px)**, optimized for Instagram posts.
+-   **Viewing Angle**: The background image is pre-vetted to have a clear surface at a readable angle, solving legibility issues before text is even applied.
 -   **Typography**: A **bold, modern sans-serif font** is used for maximum clarity and contemporary feel.
--   **Text Placement**: The quote and author are placed on the designated surface from the prompt.
 -   **Legibility Guarantee**: The composition prompt explicitly instructs the model to apply the text as a **crisp, high-contrast graphic overlay**. This ensures the text respects the surface's perspective but is **not negatively affected by the scene's lighting, shadows, or textures.**
 -   **Watermark**: A subtle watermark (`@mantra.wayfinding`) is placed in the bottom-right corner of the image.
 

@@ -227,10 +227,18 @@ button:disabled {
   gap: 1.5rem;
 }
 
+.result-image-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+}
+
 .image-container {
   width: 100%;
-  max-width: 540px; /* 1080px / 2 */
-  margin: 0 auto;
   aspect-ratio: 3 / 4; /* Matches Imagen 3:4 aspect ratio */
   background-color: var(--background-color);
   border-radius: 8px;
@@ -258,7 +266,6 @@ button:disabled {
   min-height: 180px;
 }
 
-
 .copy-button {
   position: absolute;
   top: 0.5rem;
@@ -278,4 +285,72 @@ button:disabled {
 .action-buttons {
   display: flex;
   gap: 1rem;
+  width: 100%;
+}
+
+.action-button {
+  flex: 1;
+  background-color: var(--surface-color);
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  font-weight: 500;
+}
+
+.action-button:hover:not(:disabled) {
+  background-color: var(--primary-variant-color);
+  color: var(--on-surface-color);
+  border-color: var(--primary-variant-color);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.modal-content {
+  position: relative;
+  background-color: var(--surface-color);
+  padding: 1rem;
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.modal-close {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background-color: var(--background-color);
+  color: var(--on-surface-color);
+  font-size: 2rem;
+  line-height: 36px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
