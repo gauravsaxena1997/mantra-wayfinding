@@ -1,20 +1,108 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Mantra Wayfinding: Image Generation Guide
 
-# Run and deploy your AI Studio app
+This document provides a comprehensive guide to the image generation process for the Mantra Wayfinding application. It covers the core principles, prompt structure, layout rules, and the detailed JSON specification that drives the asset creation.
 
-This contains everything you need to run your app locally.
+## 1. Core Principles
 
-View your app in AI Studio: https://ai.studio/apps/drive/1mmcxvn-VUwlr7cht8Kw0CSY8sG__TKhD
+The generator operates on a set of non-negotiable principles to ensure high-quality, brand-safe, and effective content.
 
-## Run Locally
+-   **Legibility First**: The motivational quote is the most important element. It must always be perfectly readable, with high contrast against its background.
+-   **Realistic Integration**: The quote should appear naturally integrated into the scene on a physical surface, respecting the laws of perspective.
+-   **Aesthetic Consistency**: All generated images should have a clean, modern, and photorealistic feel.
+-   **Brand Safety**: No logos, recognizable brands, celebrities, political symbols, or sensitive content is ever permitted.
+-   **No Distractions**: The only readable text in the image is the quote and a subtle watermark. Any other text in the scene (e.g., on signs, books) must be illegible.
 
-**Prerequisites:**  Node.js
+---
 
+## 2. Image Generation Rules & Prompting
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+The generation process is multi-step, starting with the creation of a "spec" and then using that spec to generate a blank background image.
+
+### Background Image Prompt Template
+
+The prompt to generate the background image (`imagen-4.0-generate-001`) follows a consistent template:
+
+`"Photorealistic {vibe} {scene} featuring a clear {placement.mode} sized for a 3:4 poster area. Lighting: {lighting}. Weather/mood: {weather}. People: {people} (no identifiable faces)."`
+
+Each variable is filled in from the generated JSON `spec`:
+
+-   `{vibe}`: The overall mood or feeling. (e.g., "serene," "minimalist," "dramatic," "inspirational")
+-   `{scene}`: The environment or setting. (e.g., "a quiet library corner," "a misty mountain path," "an architect's desk")
+-   `{placement.mode}`: The specific surface where the text will be placed. This should be a clean, relatively flat surface. (e.g., "piece of high-quality paper," "smooth concrete wall," "frosted glass pane")
+-   `{lighting}`: The lighting conditions of the scene. (e.g., "soft morning light," "dramatic sunset," "bright studio lighting")
+-   `{weather}`: The atmospheric conditions. (e.g., "calm," "rainy," "overcast," "sunny")
+-   `{people}`: Describes the presence of humans. Faces must never be identifiable. (e.g., "none," "a single person out of focus in the background")
+
+**Strict Rule**: The model is instructed to return this background image with the designated surface left **BLANK**, ready for the text composition step.
+
+---
+
+## 3. Layout, Typography & Composition
+
+Once the blank background is generated, a second model (`gemini-2.5-flash-image-preview`) composites the text onto the image.
+
+-   **Aspect Ratio**: All images are generated in a **3:4 aspect ratio (1080x1440px)**, optimized for Instagram posts.
+-   **Typography**: A **bold, modern sans-serif font** is used for maximum clarity and contemporary feel.
+-   **Text Placement**: The quote and author are placed on the designated surface from the prompt.
+-   **Legibility Guarantee**: The composition prompt explicitly instructs the model to apply the text as a **crisp, high-contrast graphic overlay**. This ensures the text respects the surface's perspective but is **not negatively affected by the scene's lighting, shadows, or textures.**
+-   **Watermark**: A subtle watermark (`@mantra.wayfinding`) is placed in the bottom-right corner of the image.
+
+---
+
+## 4. JSON `spec` Data Structure
+
+This is the central object that defines every aspect of the final generated asset.
+
+```json
+{
+  "spec_id": "string",
+  "mode": "string",
+  "alt_text": "string",
+  "quote": {
+    "text": "string",
+    "author": "string",
+    "source_book": "string",
+    "verified": "boolean"
+  },
+  "background": {
+    "vibe": "string",
+    "scene": "string",
+    "surface": "string",
+    "lighting": "string",
+    "weather": "string",
+    "people": "string",
+    "style": "string",
+    "image_prompt": "string"
+  },
+  "placement": {
+    "mode": "string"
+  },
+  "typography": {
+    "watermark_handle": "string"
+  },
+  "caption": "string",
+  "hashtags": ["string"],
+  "notes": "string"
+}
+```
+
+### Field Descriptions:
+
+-   `spec_id`: A unique identifier for the generation request.
+-   `mode`: The operating mode used ("AUTO", "MANUAL", "JSON").
+-   `alt_text`: A descriptive text for accessibility (screen readers).
+-   `quote`:
+    -   `text`: The motivational quote text (max 25 words).
+    -   `author`: The author of the quote.
+    -   `source_book`: The book or source of the quote.
+    -   `verified`: A boolean indicating if the attribution is confirmed.
+-   `background`: Contains all elements for building the background image prompt.
+    -   `vibe`, `scene`, `lighting`, etc.: See Section 2 for descriptions.
+    -   `image_prompt`: The final, complete prompt string sent to the image generation model.
+-   `placement`:
+    -   `mode`: The type of surface for the text (e.g., "on a weathered wooden sign," "printed on a coffee mug").
+-   `typography`:
+    -   `watermark_handle`: The text for the watermark.
+-   `caption`: The main text to be used in the Instagram post caption.
+-   `hashtags`: An array of 6-8 relevant hashtags.
+-   `notes`: Internal notes from the model about its choices or any changes it made (e.g., swapping an unverified quote).

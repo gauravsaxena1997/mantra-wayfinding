@@ -185,7 +185,7 @@ function App() {
         setLoadingMessage('Step 3/3: Magically printing the quote onto the scene...');
 
         const watermark = spec.typography?.watermark_handle || '@mantra.wayfinding';
-        const compositionPrompt = `Using a bold modern sans-serif font, print the following quote onto the blank surface in the image: "${spec.quote.text}" — ${spec.quote.author}. Also, add a small, subtle watermark in the bottom-right corner: "${watermark}". The final image must be high-contrast and legible, respecting the perspective of the surface. Return ONLY the final image.`;
+        const compositionPrompt = `Using a bold, modern sans-serif font, apply the following text to the blank surface in the image. The text MUST be perfectly legible and high-contrast. It should appear as a crisp graphic overlay that respects the surface's perspective but is NOT affected by the scene's lighting, shadows, or textures. The quote must be the most prominent visual element. Text to add: "${spec.quote.text}" — ${spec.quote.author}. Also, add a small, subtle watermark in the bottom-right corner: "${watermark}". Return ONLY the final composited image.`;
         
         const compositionResponse = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image-preview',
