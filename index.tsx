@@ -18,40 +18,31 @@ OPERATING MODES
 - MANUAL — If provided: custom_quote_text, custom_author, custom_source_book. Validate attribution/length; if unverifiable or >25 words, swap to a known, verified short quote aligned to theme.
 - JSON: Input a specific format JSON in a text area.
 
-NON-NEGOTIABLE IMAGE/TEXT POLICY
-
-1. MAXIMUM READABILITY IS THE #1 PRIORITY: The quote is the hero. The surface for the text must be clear, well-lit, and angled for easy reading (e.g., mostly front-facing, avoiding steep perspective angles greater than 45 degrees). The final text must be instantly legible.
-2. Only readable text in the image:
-a) the quote, and
-b) a tiny watermark handle.
-If the scene contains signage/posters/labels, render them blank or make them illegible via angle, distance, depth of field, texture/noise. Never show ratios/prompts/seeds/model names/“3:4”/numbers in the image.
-3. Real surface placement: quote must appear printed/painted on a physical surface in-scene (not floating), with correct perspective, texture, shadows/reflections.
-4. Legibility: bold modern sans; high contrast; watermark = @mantra.wayfinding bottom-right, subtle.
-5. Safety: no brands/logos/celebrities/political symbols/profane or sensitive imagery.
+PLACEMENT MODES ENUM (background.quotePlacement MUST be one of these)
+- ENGRAVED_ON_STONE_WALL: The quote is chiseled into a clean, modern stone or concrete wall.
+- PAINTED_ON_BRICK_FACADE: The quote is painted as a high-quality mural on an urban brick wall.
+- NEON_SIGN_ON_BUILDING: The quote is displayed as a stylish neon sign against a dark or twilight building facade.
+- PROJECTED_ON_MODERN_ARCHITECTURE: The quote is projected with light onto a large, minimalist architectural surface at dusk.
+- METAL_PLAQUE_ON_WALL: The quote is on a sleek, brushed metal plaque affixed to a wall.
+- LETTERPRESS_ON_THICK_CARDSTOCK: The quote is printed with the classic letterpress effect on high-quality, textured paper.
+- TYPED_ON_VINTAGE_PAPER: The quote appears on a sheet of aged paper from a vintage typewriter.
+- PAGE_IN_AN_OPEN_BOOK: The quote is printed on a page of a beautifully designed, open book.
+- HIGH_QUALITY_POSTER_FRAME: The quote is displayed within a minimalist frame, hanging on a wall.
+- WRITTEN_IN_SAND_ON_BEACH: The quote is neatly drawn into calm, smooth sand on a beach.
+- CARVED_INTO_SMOOTH_WOOD: The quote is elegantly carved into a polished slab of wood or a smooth tree trunk.
+- ARRANGED_WITH_STONES_OR_LEAVES: The quote is formed by carefully arranging natural elements like small stones or leaves on a flat surface.
+- CERAMIC_PRINT_ON_COFFEE_MUG: The quote is printed cleanly on the side of a minimalist coffee mug.
+- ETCHED_INTO_GLASS_PANE: The quote is subtly etched or frosted onto a clean glass window or panel.
+- LABEL_ON_MINIMALIST_BOTTLE: The quote is designed as a high-end product label on a simple glass bottle.
 
 ANTI-REPETITION (AUTO)
 Maintain a no-repeat buffer of 30 across {quote text, author, book, scene type, vibe}. If collision, pivot.
 
-AUTHOR/BOOK GUARDRAILS (examples, not exhaustive)
-James Clear (Atomic Habits), Cal Newport (Deep Work), Carol Dweck (Mindset), Stephen R. Covey, Viktor Frankl, Angela Duckworth, Ryan Holiday, Marcus Aurelius, Seneca, Epictetus, Thich Nhat Hanh, Maya Angelou, Emerson, William James, Oliver Burkeman, Naval Ravikant (Almanack). Use only short, widely cited lines with clear attribution.
-
-IMAGE GENERATION TEMPLATE (internal guidance)
-"Photorealistic {vibe} {scene} featuring a clear {placement.mode} sized for a 3:4 poster area.
-Lighting: {lighting}. Weather/mood: {weather}. People: {people} (no identifiable faces).
-
-STRICT RULES:
-- The ONLY readable text in the final image must be the printed quote + tiny watermark.
-- Any environmental signage/labels must be blank or illegible via angle/blur/distance.
-- Do NOT show ratios, seeds, prompts, or numbers anywhere in the image.
-- The {placement.mode} surface must be flat, well-lit, mostly front-facing (less than 45-degree angle to the camera) for maximum text readability. It must have realistic shadows/reflections.
-- Output 1080x1440 (3:4).
-- Return the surface BLANK, ready for text placement. Color grade: {style}. Natural, brand-safe, documentary feel."
-
 SELF-CHECKS (must pass before responding)
-- Readability is prioritized: Is the surface positioned for easy reading?
+- All strict_guidelines are understood and will be followed.
 - Attribution verified + ≤25 words (else swap).
+- background.quotePlacement is a valid value from the ENUM list.
 - Only the quote + watermark will be readable in the final composition.
-- Text sits on a real in-scene surface, perspective-correct.
 - The generated JSON will strictly adhere to the schema.
 
 OUTPUT CONTRACT: Return only a valid JSON object that adheres to the provided schema. Do not include any other text, prose, or markdown formatting in your response.
@@ -69,37 +60,32 @@ const responseSchema = {
                 text: { type: Type.STRING },
                 author: { type: Type.STRING },
                 source_book: { type: Type.STRING },
-                verified: { type: Type.BOOLEAN },
             },
-            required: ['text', 'author', 'source_book', 'verified']
+            required: ['text', 'author', 'source_book']
         },
         background: {
             type: Type.OBJECT,
             properties: {
                 vibe: { type: Type.STRING },
                 scene: { type: Type.STRING },
-                surface: { type: Type.STRING },
+                quotePlacement: { type: Type.STRING },
+                fontSuggestion: { type: Type.STRING },
                 lighting: { type: Type.STRING },
                 weather: { type: Type.STRING },
                 people: { type: Type.STRING },
                 style: { type: Type.STRING },
                 image_prompt: { type: Type.STRING },
             },
-            required: ['image_prompt']
+            required: ['vibe', 'scene', 'quotePlacement', 'fontSuggestion', 'lighting', 'weather', 'people', 'style', 'image_prompt']
         },
-        placement: {
+        watermark: {
             type: Type.OBJECT,
             properties: {
-                mode: { type: Type.STRING },
+                text: { type: Type.STRING },
+                font: { type: Type.STRING },
+                placement: { type: Type.STRING },
             },
-            required: ['mode'],
-        },
-        typography: {
-            type: Type.OBJECT,
-            properties: {
-                watermark_handle: { type: Type.STRING },
-            },
-            required: ['watermark_handle']
+            required: ['text', 'font', 'placement'],
         },
         caption: { type: Type.STRING },
         hashtags: {
@@ -107,8 +93,19 @@ const responseSchema = {
             items: { type: Type.STRING }
         },
         notes: { type: Type.STRING },
+        strict_guidelines: {
+            type: Type.OBJECT,
+            properties: {
+                readability: { type: Type.STRING, description: "Readability Above All: The quote is the hero of the image. Its legibility is the primary goal, overriding other aesthetic considerations if they conflict. The text must be instantly and effortlessly readable." },
+                integration: { type: Type.STRING, description: "Realistic Integration: The quote should appear naturally integrated into the scene on a physical surface, respecting perspective, lighting, shadows, and texture. It should look physically present, not like a sticker." },
+                aesthetic: { type: Type.STRING, description: "Aesthetic Consistency: All generated images should have a clean, modern, and photorealistic feel." },
+                safety: { type: Type.STRING, description: "Brand Safety: No logos, recognizable brands, celebrities, political symbols, or sensitive content is ever permitted." },
+                distractions: { type: Type.STRING, description: "No Distractions: The only readable text in the image is the quote and a subtle watermark. Any other text in the scene (e.g., on signs, books) must be illegible." },
+            },
+            required: ['readability', 'integration', 'aesthetic', 'safety', 'distractions']
+        },
     },
-    required: ['spec_id', 'mode', 'alt_text', 'quote', 'background', 'placement', 'caption', 'hashtags', 'typography']
+    required: ['spec_id', 'mode', 'alt_text', 'quote', 'background', 'watermark', 'caption', 'hashtags', 'notes', 'strict_guidelines']
 };
 
 
@@ -118,6 +115,8 @@ function App() {
   const [mode, setMode] = useState<Mode>('AUTO');
   const [manualInputs, setManualInputs] = useState({ quote: '', author: '', source: '' });
   const [jsonInput, setJsonInput] = useState('');
+  const [watermarkText, setWatermarkText] = useState('@matra.wayfinding');
+  const [watermarkPlacement, setWatermarkPlacement] = useState('Bottom - Right');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -169,6 +168,10 @@ function App() {
             spec = JSON.parse(specResponse.text.trim());
         }
 
+        // Override spec with user settings from controls
+        spec.watermark.text = watermarkText;
+        spec.watermark.placement = watermarkPlacement;
+
         setOutput(spec);
 
         setLoadingMessage('Step 2/3: Generating a beautiful background image...');
@@ -188,8 +191,32 @@ function App() {
         
         setLoadingMessage('Step 3/3: Magically printing the quote onto the scene...');
 
-        const watermark = spec.typography?.watermark_handle || '@mantra.wayfinding';
-        const compositionPrompt = `Using a bold, modern sans-serif font, apply the following text to the blank surface in the image. The text MUST be perfectly legible and high-contrast. It should appear as a crisp graphic overlay that respects the surface's perspective but is NOT affected by the scene's lighting, shadows, or textures. The quote must be the most prominent visual element. Text to add: "${spec.quote.text}" — ${spec.quote.author}. Also, add a small, subtle watermark in the bottom-right corner: "${watermark}". Return ONLY the final composited image.`;
+        const { strict_guidelines, background, quote, watermark } = spec;
+
+        const compositionPrompt = `
+**CRITICAL INSTRUCTIONS: You MUST follow these rules to create a photorealistic image.**
+
+1.  **STRICT GUIDELINES ADHERENCE:**
+    *   **Readability:** "${strict_guidelines.readability}"
+    *   **Integration:** "${strict_guidelines.integration}"
+    *   **Aesthetic:** "${strict_guidelines.aesthetic}"
+    *   **No Distractions:** "${strict_guidelines.distractions}"
+
+2.  **PHYSICAL SIMULATION (NO FLAT OVERLAYS):**
+    *   **ABSOLUTELY NO "STICKERS" OR FLAT TEXT.** The text must look like a physical part of the surface.
+    *   If the placement is '${background.quotePlacement}', simulate that physical process.
+    *   For **CARVED** or **ENGRAVED** text: It must have visible depth, inner shadows, and highlights consistent with the scene's lighting ('${background.lighting}'). The surface material (e.g., wood grain) must be visible *inside* the letters.
+    *   For **PAINTED** text: It must follow the surface's micro-texture (e.g., brick mortar lines, canvas weave). It should not be perfectly smooth unless the surface is.
+    *   For **PROJECTED** text: It must have soft edges and its brightness must realistically illuminate the surrounding surface.
+
+3.  **COMPOSITION DETAILS:**
+    *   **Font:** Use a font style inspired by: '${background.fontSuggestion}'.
+    *   **Quote Text:** Render this EXACT text: "${quote.text}"
+    *   **Author Text:** DO NOT render the author's name on the image.
+    *   **Watermark:** Add a very small, subtle watermark in the **${watermark.placement}** corner with the text: "${watermark.text}". **IMPORTANT**: The watermark must have a small, visible gap from the image edges to ensure it is not cut off.
+
+Return ONLY the final composited image. Failure to follow these rules will result in an unacceptable image.
+`;
         
         const compositionResponse = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image-preview',
@@ -219,9 +246,9 @@ function App() {
         setGeneratedImageUrl(`data:image/png;base64,${finalImageBase64}`);
         
         // Format the final caption
-        const { quote, caption, hashtags } = spec;
-        const formattedHashtags = hashtags.map(h => `#${h.replace(/#/g, '')}`).join(' ');
-        const finalCaption = `${quote.text}\n\n${caption}\n\nAuthor: ${quote.author}\nSource: ${quote.source_book}\n\n${formattedHashtags}`;
+        const { caption, hashtags } = spec;
+        const formattedHashtags = hashtags.join(' ');
+        const finalCaption = `${caption}\n\nAuthor: ${quote.author}\nSource: ${quote.source_book}\n\n${formattedHashtags}`;
         setFormattedCaption(finalCaption);
 
 
@@ -265,30 +292,51 @@ function App() {
         <div className="app-container">
             <div className="controls-panel">
                 <h2>Controls</h2>
-                <div className="tabs">
-                    {(['AUTO', 'MANUAL', 'JSON'] as Mode[]).map(m => (
-                        <button key={m} className={`tab ${mode === m ? 'active' : ''}`} onClick={() => setMode(m)}>
-                            {m.charAt(0) + m.slice(1).toLowerCase()}
-                        </button>
-                    ))}
+                
+                <div className="control-group">
+                    <h3 className="control-group-title">Watermark</h3>
+                    <div className="form-group">
+                        <label htmlFor="watermark-text">Watermark Text</label>
+                        <input id="watermark-text" type="text" value={watermarkText} onChange={e => setWatermarkText(e.target.value)} />
+                    </div>
+                     <div className="form-group">
+                        <label htmlFor="watermark-placement">Watermark Placement</label>
+                        <select id="watermark-placement" value={watermarkPlacement} onChange={e => setWatermarkPlacement(e.target.value)}>
+                            <option>Bottom - Right</option>
+                            <option>Bottom - Left</option>
+                            <option>Top - Right</option>
+                            <option>Top - Left</option>
+                        </select>
+                    </div>
                 </div>
 
-                {mode === 'MANUAL' && (
-                    <div className="form-group">
-                        <label htmlFor="quote">Custom Quote</label>
-                        <textarea id="quote" value={manualInputs.quote} onChange={e => setManualInputs({...manualInputs, quote: e.target.value})} />
-                        <label htmlFor="author">Author</label>
-                        <input id="author" type="text" value={manualInputs.author} onChange={e => setManualInputs({...manualInputs, author: e.target.value})} />
-                        <label htmlFor="source">Source</label>
-                        <input id="source" type="text" value={manualInputs.source} onChange={e => setManualInputs({...manualInputs, source: e.target.value})} />
+                <div className="control-group">
+                    <h3 className="control-group-title">Mode</h3>
+                    <div className="tabs">
+                        {(['AUTO', 'MANUAL', 'JSON'] as Mode[]).map(m => (
+                            <button key={m} className={`tab ${mode === m ? 'active' : ''}`} onClick={() => setMode(m)}>
+                                {m.charAt(0) + m.slice(1).toLowerCase()}
+                            </button>
+                        ))}
                     </div>
-                )}
-                {mode === 'JSON' && (
-                    <div className="form-group">
-                        <label htmlFor="json">JSON Spec</label>
-                        <textarea id="json" value={jsonInput} onChange={e => setJsonInput(e.target.value)} />
-                    </div>
-                )}
+
+                    {mode === 'MANUAL' && (
+                        <div className="form-group">
+                            <label htmlFor="quote">Custom Quote</label>
+                            <textarea id="quote" value={manualInputs.quote} onChange={e => setManualInputs({...manualInputs, quote: e.target.value})} />
+                            <label htmlFor="author">Author</label>
+                            <input id="author" type="text" value={manualInputs.author} onChange={e => setManualInputs({...manualInputs, author: e.target.value})} />
+                            <label htmlFor="source">Source</label>
+                            <input id="source" type="text" value={manualInputs.source} onChange={e => setManualInputs({...manualInputs, source: e.target.value})} />
+                        </div>
+                    )}
+                    {mode === 'JSON' && (
+                        <div className="form-group">
+                            <label htmlFor="json">JSON Spec</label>
+                            <textarea id="json" value={jsonInput} onChange={e => setJsonInput(e.target.value)} />
+                        </div>
+                    )}
+                </div>
 
                 <button onClick={handleGenerate} disabled={isLoading}>
                     {isLoading ? 'Generating...' : 'Generate Asset'}
@@ -335,6 +383,14 @@ function App() {
                                 <button className="copy-button" onClick={() => handleCopy(output.alt_text)}>Copy</button>
                                 <textarea readOnly value={output.alt_text}></textarea>
                             </div>
+                             <div className="generation-parameters">
+                                <h3>Used Parameters</h3>
+                                <p><strong>Placement Mode:</strong> {output.background.quotePlacement}</p>
+                                <p><strong>Vibe:</strong> {output.background.vibe}</p>
+                                <p><strong>Scene:</strong> {output.background.scene}</p>
+                                <p><strong>Lighting:</strong> {output.background.lighting}</p>
+                                <p><strong>Style:</strong> {output.background.style}</p>
+                             </div>
                              <div className="form-group">
                                 <label>Generated JSON Spec</label>
                                 <button className="copy-button" onClick={() => handleCopy(JSON.stringify(output, null, 2))}>Copy</button>
