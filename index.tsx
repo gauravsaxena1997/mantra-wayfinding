@@ -408,11 +408,21 @@ Return ONLY the final composited image. Failure to follow these rules will resul
 
                         <div className="control-group">
                             <h3 className="control-group-title">Mode</h3>
-                            <div className="tabs">
+                             <div className="radio-group">
                                 {(['AUTO', 'MANUAL', 'JSON'] as Mode[]).map(m => (
-                                    <button key={m} className={`tab ${mode === m ? 'active' : ''}`} onClick={() => setMode(m)}>
-                                        {m.charAt(0) + m.slice(1).toLowerCase()}
-                                    </button>
+                                    <div key={m}>
+                                        <input
+                                            type="radio"
+                                            id={`mode-${m}`}
+                                            name="mode"
+                                            value={m}
+                                            checked={mode === m}
+                                            onChange={() => setMode(m)}
+                                        />
+                                        <label htmlFor={`mode-${m}`}>
+                                            {m.charAt(0) + m.slice(1).toLowerCase()}
+                                        </label>
+                                    </div>
                                 ))}
                             </div>
 

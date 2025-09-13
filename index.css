@@ -238,41 +238,52 @@ input:checked + .slider:before {
   color: var(--on-background-color);
 }
 
-.tabs {
+/* --- Mode Radio Group --- */
+.radio-group {
   display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
   margin-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border-color);
 }
 
-.tab {
+.radio-group div {
+  flex: 1;
+}
+
+.radio-group input[type="radio"] {
+  display: none;
+}
+
+.radio-group label {
+  display: block;
   padding: 0.75rem 1rem;
-  border: none;
-  background: none;
-  color: var(--on-background-color);
+  text-align: center;
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
-  position: relative;
-  transition: color 0.2s ease;
+  color: var(--on-background-color);
   opacity: 0.7;
+  transition: all 0.2s ease;
+  border-right: 1px solid var(--border-color);
 }
 
-.tab:hover, .tab.active {
-    opacity: 1;
+.radio-group div:last-child label {
+  border-right: none;
 }
 
-.tab.active {
-  color: var(--primary-color);
-}
-
-.tab.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  width: 100%;
-  height: 2px;
+.radio-group input[type="radio"]:checked + label {
   background-color: var(--primary-color);
+  color: #fff;
+  opacity: 1;
+}
+
+:root.theme-dark .radio-group input[type="radio"]:checked + label {
+    color: #000;
+}
+
+.radio-group label:hover {
+    opacity: 1;
 }
 
 .form-group {
@@ -593,4 +604,33 @@ input:checked + .slider:before {
 .generation-parameters p strong {
     font-weight: 500;
     color: var(--on-background-color);
+}
+
+/* --- Theme-Aware Scrollbars --- */
+.controls-scroller::-webkit-scrollbar,
+.output-panel::-webkit-scrollbar {
+  width: 10px;
+}
+
+:root.theme-dark .controls-scroller::-webkit-scrollbar-track,
+:root.theme-dark .output-panel::-webkit-scrollbar-track {
+  background: var(--surface-color);
+}
+
+:root.theme-light .controls-scroller::-webkit-scrollbar-track,
+:root.theme-light .output-panel::-webkit-scrollbar-track {
+  background: #e9e9e9;
+}
+
+.controls-scroller::-webkit-scrollbar-thumb,
+.output-panel::-webkit-scrollbar-thumb {
+  background-color: var(--placeholder-color);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.controls-scroller::-webkit-scrollbar-thumb:hover,
+.output-panel::-webkit-scrollbar-thumb:hover {
+  background-color: var(--primary-color);
 }
