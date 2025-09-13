@@ -18,6 +18,10 @@ OPERATING MODES
 - MANUAL — If provided: custom_quote_text, custom_author, custom_source_book. Validate attribution/length; if unverifiable or >25 words, swap to a known, verified short quote aligned to theme.
 - JSON: Input a specific format JSON in a text area.
 
+CAPTION FORMAT
+- The 'caption' field in the JSON should ONLY contain the engaging body text (e.g., "Every grand adventure..."), ending with an encouraging question and the ✨ emoji.
+- Do NOT include the quote, author, or source in the 'caption' field itself. The final post format will be assembled programmatically.
+
 PLACEMENT MODES ENUM (background.quotePlacement MUST be one of these)
 - ENGRAVED_ON_STONE_WALL: The quote is chiseled into a clean, modern stone or concrete wall.
 - PAINTED_ON_BRICK_FACADE: The quote is painted as a high-quality mural on an urban brick wall.
@@ -101,8 +105,9 @@ const responseSchema = {
                 aesthetic: { type: Type.STRING, description: "Aesthetic Consistency: All generated images should have a clean, modern, and photorealistic feel." },
                 safety: { type: Type.STRING, description: "Brand Safety: No logos, recognizable brands, celebrities, political symbols, or sensitive content is ever permitted." },
                 distractions: { type: Type.STRING, description: "No Distractions: The only readable text in the image is the quote and a subtle watermark. Any other text in the scene (e.g., on signs, books) must be illegible." },
+                caption_format: { type: Type.STRING, description: "Confirms understanding of the multi-line caption structure: Quote, Author/Source, Blank Line, Caption Body, Blank Line, Hashtags." },
             },
-            required: ['readability', 'integration', 'aesthetic', 'safety', 'distractions']
+            required: ['readability', 'integration', 'aesthetic', 'safety', 'distractions', 'caption_format']
         },
     },
     required: ['spec_id', 'mode', 'alt_text', 'quote', 'background', 'watermark', 'caption', 'hashtags', 'notes', 'strict_guidelines']
@@ -246,9 +251,9 @@ Return ONLY the final composited image. Failure to follow these rules will resul
         setGeneratedImageUrl(`data:image/png;base64,${finalImageBase64}`);
         
         // Format the final caption
-        const { caption, hashtags } = spec;
+        const { quote: specQuote, caption, hashtags } = spec;
         const formattedHashtags = hashtags.join(' ');
-        const finalCaption = `${caption}\n\nAuthor: ${quote.author}\nSource: ${quote.source_book}\n\n${formattedHashtags}`;
+        const finalCaption = `${specQuote.text}\n- ${specQuote.author} (${specQuote.source_book})\n\n${caption}\n\n${formattedHashtags}`;
         setFormattedCaption(finalCaption);
 
 

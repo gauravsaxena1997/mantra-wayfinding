@@ -52,6 +52,7 @@ The generator operates on a set of non-negotiable principles to ensure high-qual
 -   **Aesthetic Consistency**: All generated images should have a clean, modern, and photorealistic feel.
 -   **Brand Safety**: No logos, brands, celebrities, or sensitive content.
 -   **No Distractions**: The quote and watermark are the only readable text.
+-   **Caption Format**: The final caption must adhere to the standardized multi-line format.
 
 ### Placement Modes Enum
 To ensure consistency and quality, the AI **must** choose a `quotePlacement` value from the following predefined list.
@@ -106,7 +107,7 @@ This is the central object that defines every aspect of the final generated asse
     "font": "Subtle, light, sans-serif",
     "placement": "Bottom - Right"
   },
-  "caption": "string",
+  "caption": "string (The engaging body text of the caption, ending with a question and the ✨ emoji)",
   "hashtags": [
     "string",
     "string"
@@ -117,7 +118,8 @@ This is the central object that defines every aspect of the final generated asse
     "integration": "Realistic Integration: The quote should appear naturally integrated into the scene on a physical surface, respecting perspective, lighting, shadows, and texture. It should look physically present, not like a sticker.",
     "aesthetic": "Aesthetic Consistency: All generated images should have a clean, modern, and photorealistic feel.",
     "safety": "Brand Safety: No logos, recognizable brands, celebrities, political symbols, or sensitive content is ever permitted.",
-    "distractions": "No Distractions: The only readable text in the image is the quote and a subtle watermark. Any other text in the scene (e.g., on signs, books) must be illegible."
+    "distractions": "No Distractions: The only readable text in the image is the quote and a subtle watermark. Any other text in the scene (e.g., on signs, books) must be illegible.",
+    "caption_format": "Confirms understanding of the multi-line caption structure: Quote, Author/Source, Blank Line, Caption Body, Blank Line, Hashtags."
   }
 }
 ```
@@ -128,7 +130,7 @@ This is the central object that defines every aspect of the final generated asse
 -   `spec_id`: A unique identifier for the generation request.
 -   `mode`: The operating mode used (`"AUTO"`, `"MANUAL"`, `"JSON"`).
 -   `alt_text`: A descriptive text for accessibility (screen readers).
--   `caption`: The main text to be used in the Instagram post caption.
+-   `caption`: The main body text for the Instagram post, ending with an encouraging question and the ✨ emoji. It should **NOT** include the quote, author, or source.
 -   `hashtags`: An array of 6-8 relevant hashtags. Each string **must** begin with a `#`.
 -   `notes`: Internal notes from the model about its creative choices or any changes it made.
 
@@ -160,3 +162,4 @@ An object containing the non-negotiable rules for generation. This is populated 
 -   `aesthetic`: Confirms understanding that the final image must be clean, modern, and photorealistic.
 -   `safety`: Confirms understanding of brand safety rules (no logos, celebrities, sensitive content, etc.).
 -   `distractions`: Confirms understanding that only the quote and watermark should be legible.
+-   `caption_format`: Confirms understanding of the multi-line caption structure: `Quote`, `Author/Source`, `Blank Line`, `Caption Body`, `Blank Line`, `Hashtags`.
