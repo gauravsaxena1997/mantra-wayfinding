@@ -311,7 +311,11 @@ Return ONLY the final composited image. Failure to follow these rules will resul
 
     } catch (e) {
         console.error(e);
-        setError(`An error occurred: ${e.message}`);
+        let friendlyError = `An error occurred: ${e.message}`;
+        if (e.message && (e.message.includes('429') || e.message.includes('RESOURCE_EXHAUSTED'))) {
+            friendlyError = "Quota limit reached. The shared key may be busy. Please enter your own Gemini API key above to continue, or wait and try again later.";
+        }
+        setError(friendlyError);
     } finally {
         setIsLoading(false);
         setLoadingMessage('');
@@ -375,7 +379,12 @@ Return ONLY the final composited image. Failure to follow these rules will resul
                         <div className="control-group">
                             <h3 className="control-group-title">API Key</h3>
                             <div className="form-group">
-                                <label htmlFor="api-key">Your Gemini API Key</label>
+                                <label htmlFor="api-key" id="api-key-label">
+                                    Your Gemini API Key
+                                    <span className={`api-key-status ${userApiKey ? 'user' : 'shared'}`}>
+                                        {userApiKey ? 'Using Your Key' : 'Using Shared Key'}
+                                    </span>
+                                </label>
                                 <input
                                     id="api-key"
                                     type="password"

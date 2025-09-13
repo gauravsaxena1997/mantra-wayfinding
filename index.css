@@ -17,7 +17,7 @@
   --surface-color: #ffffff;
   --primary-color: #6200ee;
   --primary-variant-color: #3700b3;
-  --secondary-color: #03dac6;
+  --secondary-color: #018786;
   --on-background-color: #333;
   --on-surface-color: #000000;
   --border-color: #e0e0e0;
@@ -300,6 +300,31 @@ input:checked + .slider:before {
   font-weight: 500;
   font-size: 0.9rem;
 }
+
+#api-key-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.api-key-status {
+    font-size: 0.8rem;
+    font-weight: 400;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    opacity: 0.9;
+}
+
+.api-key-status.shared {
+    background-color: var(--border-color);
+    color: var(--placeholder-color);
+}
+
+.api-key-status.user {
+    background-color: rgba(3, 218, 198, 0.2);
+    color: var(--secondary-color);
+}
+
 
 .form-group input, .form-group textarea, .form-group select {
   width: 100%;
