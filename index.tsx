@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality } from '@google/genai';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 
 // The system prompt is the core of the application's logic.
@@ -39,8 +39,10 @@ PLACEMENT MODES ENUM (background.quotePlacement MUST be one of these)
 - ETCHED_INTO_GLASS_PANE: The quote is subtly etched or frosted onto a clean glass window or panel.
 - LABEL_ON_MINIMALIST_BOTTLE: The quote is designed as a high-end product label on a simple glass bottle.
 
-ANTI-REPETITION (AUTO)
-Maintain a no-repeat buffer of 30 across {quote text, author, book, scene type, vibe}. If collision, pivot.
+ANTI-REPETITION RULE: The user will provide a history of recently used quotes and authors.
+-   You MUST NOT generate a quote that is in the 'Quote History' list.
+-   You MUST STRONGLY AVOID generating a quote from an author in the 'Recent Author History' list (last 10).
+-   This rule is critical. Acknowledge and follow it.
 
 SELF-CHECKS (must pass before responding)
 - All strict_guidelines are understood and will be followed.
@@ -130,6 +132,30 @@ function App() {
   const [formattedCaption, setFormattedCaption] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Anti-repetition state, initialized from localStorage
+  const [quoteHistory, setQuoteHistory] = useState(() => {
+    try {
+        const saved = localStorage.getItem('mantraQuoteHistory');
+        return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch (e) {
+        return new Set();
+    }
+  });
+  const [authorHistory, setAuthorHistory] = useState(() => {
+    try {
+        const saved = localStorage.getItem('mantraAuthorHistory');
+        return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+        return [];
+    }
+  });
+
+  // Effect to save history to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('mantraQuoteHistory', JSON.stringify(Array.from(quoteHistory)));
+    localStorage.setItem('mantraAuthorHistory', JSON.stringify(authorHistory));
+  }, [quoteHistory, authorHistory]);
+
 
   const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.API_KEY }), []);
 
@@ -152,11 +178,16 @@ function App() {
                  throw new Error(`Invalid JSON provided. Please check the format. ${jsonError.message}`);
             }
         } else {
-            let userPrompt = "Generate one new Instagram motivation asset in AUTO mode. Ensure it does not repeat recent themes.";
+            let userPrompt = `Generate one new Instagram motivation asset in AUTO mode.`;
             if (mode === 'MANUAL') {
                 userPrompt = `Generate one new Instagram motivation asset in MANUAL mode with the following inputs: custom_quote_text: '${manualInputs.quote}', custom_author: '${manualInputs.author}', custom_source_book: '${manualInputs.source}'. If the quote is invalid, replace it with a verified one on a similar theme.`;
             }
             
+            // Inject history for anti-repetition
+            const quoteHistoryStr = Array.from(quoteHistory).join('; ');
+            const authorHistoryStr = authorHistory.join('; ');
+            userPrompt += `\n\n---ANTI-REPETITION DATA---\nQuote History (DO NOT USE): ${quoteHistoryStr}\nRecent Author History (AVOID): ${authorHistoryStr}`;
+
             const specResponse = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: userPrompt,
@@ -171,6 +202,10 @@ function App() {
                  throw new Error("The model returned an empty response for the spec generation. This could be due to a content safety policy. Please try a different prompt.");
             }
             spec = JSON.parse(specResponse.text.trim());
+
+            // Update history after successful generation
+            setQuoteHistory(prev => new Set(prev).add(spec.quote.text));
+            setAuthorHistory(prev => [spec.quote.author, ...prev].slice(0, 10));
         }
 
         // Override spec with user settings from controls
