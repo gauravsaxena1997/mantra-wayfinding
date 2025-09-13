@@ -142,6 +142,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [output, setOutput] = useState<any | null>(null);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [formattedCaption, setFormattedCaption] = useState('');
 
   const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.API_KEY }), []);
 
@@ -150,27 +151,37 @@ function App() {
     setError(null);
     setOutput(null);
     setGeneratedImageUrl(null);
+    setFormattedCaption('');
+
+    let spec = null;
 
     try {
         setLoadingMessage('Step 1/3: Crafting the perfect scene and quote...');
-        let userPrompt = "Generate one new Instagram motivation asset in AUTO mode. Ensure it does not repeat recent themes.";
-        if (mode === 'MANUAL') {
-            userPrompt = `Generate one new Instagram motivation asset in MANUAL mode with the following inputs: custom_quote_text: '${manualInputs.quote}', custom_author: '${manualInputs.author}', custom_source_book: '${manualInputs.source}'. If the quote is invalid, replace it with a verified one on a similar theme.`;
-        } else if (mode === 'JSON') {
-            userPrompt = `Use the following JSON spec to generate the asset: ${jsonInput}`;
+        
+        if (mode === 'JSON') {
+            try {
+                spec = JSON.parse(jsonInput);
+            } catch (jsonError) {
+                 throw new Error(`Invalid JSON provided. Please check the format. ${jsonError.message}`);
+            }
+        } else {
+            let userPrompt = "Generate one new Instagram motivation asset in AUTO mode. Ensure it does not repeat recent themes.";
+            if (mode === 'MANUAL') {
+                userPrompt = `Generate one new Instagram motivation asset in MANUAL mode with the following inputs: custom_quote_text: '${manualInputs.quote}', custom_author: '${manualInputs.author}', custom_source_book: '${manualInputs.source}'. If the quote is invalid, replace it with a verified one on a similar theme.`;
+            }
+            
+            const specResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: userPrompt,
+                config: {
+                    systemInstruction: SYSTEM_PROMPT,
+                    responseMimeType: 'application/json',
+                    responseSchema: responseSchema,
+                },
+            });
+            spec = JSON.parse(specResponse.text);
         }
-        
-        const specResponse = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: userPrompt,
-            config: {
-                systemInstruction: SYSTEM_PROMPT,
-                responseMimeType: 'application/json',
-                responseSchema: responseSchema,
-            },
-        });
-        
-        const spec = JSON.parse(specResponse.text);
+
         setOutput(spec);
 
         setLoadingMessage('Step 2/3: Generating a beautiful background image...');
@@ -219,6 +230,12 @@ function App() {
         }
 
         setGeneratedImageUrl(`data:image/png;base64,${finalImageBase64}`);
+        
+        // Format the final caption
+        const { quote, caption, hashtags } = spec;
+        const finalCaption = `${quote.text}\n\n${caption}\n\n${quote.author}\n${quote.source_book}\n\n${hashtags.join(' ')}`;
+        setFormattedCaption(finalCaption);
+
 
     } catch (e) {
         console.error(e);
@@ -298,18 +315,18 @@ function App() {
                         <div className="text-outputs">
                              <div className="form-group">
                                 <label>Caption</label>
-                                <button className="copy-button" onClick={() => handleCopy(output.caption)}>Copy</button>
-                                <textarea readOnly value={output.caption}></textarea>
-                            </div>
-                            <div className="form-group">
-                                <label>Hashtags</label>
-                                <button className="copy-button" onClick={() => handleCopy(output.hashtags.join(' '))}>Copy</button>
-                                <textarea readOnly value={output.hashtags.join(' ')}></textarea>
+                                <button className="copy-button" onClick={() => handleCopy(formattedCaption)}>Copy</button>
+                                <textarea readOnly value={formattedCaption}></textarea>
                             </div>
                               <div className="form-group">
                                 <label>Alt Text</label>
                                 <button className="copy-button" onClick={() => handleCopy(output.alt_text)}>Copy</button>
                                 <textarea readOnly value={output.alt_text}></textarea>
+                            </div>
+                             <div className="form-group">
+                                <label>Generated JSON Spec</label>
+                                <button className="copy-button" onClick={() => handleCopy(JSON.stringify(output, null, 2))}>Copy</button>
+                                <textarea readOnly value={output ? JSON.stringify(output, null, 2) : ''}></textarea>
                             </div>
                         </div>
                     </div>
