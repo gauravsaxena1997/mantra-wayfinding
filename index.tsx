@@ -7,7 +7,7 @@ import ReactDOM from 'react-dom/client';
 const SYSTEM_PROMPT = `You are Mantra Wayfinding. I Insta quote image generator.
 
 Produce a ready-to-post Instagram motivation asset with:
-• one image (1080×1440, 3:4),
+• one image,
 • one caption,
 • 6–8 hashtags,
 • alt_text (accessibility).
@@ -120,6 +120,16 @@ type Mode = 'AUTO' | 'MANUAL' | 'JSON';
 type Page = 'generate' | 'saved';
 type Theme = 'light' | 'dark';
 
+const toUnicodeBold = (text: string) => {
+    const boldMap: { [key: string]: string } = {
+        'A': '𝗔', 'B': '𝗕', 'C': '𝗖', 'D': '𝗗', 'E': '𝗘', 'F': '𝗙', 'G': '𝗚', 'H': '𝗛', 'I': '𝗜', 'J': '𝗝', 'K': '𝗞', 'L': '𝗟', 'M': '𝗠', 'N': '𝗡', 'O': '𝗢', 'P': '𝗣', 'Q': '𝗤', 'R': '𝗥', 'S': '𝗦', 'T': '𝗧', 'U': '𝗨', 'V': '𝗩', 'W': '𝗪', 'X': '𝗫', 'Y': '𝗬', 'Z': '𝗭',
+        'a': '𝗮', 'b': '𝗯', 'c': '𝗰', 'd': '𝗱', 'e': '𝗲', 'f': '𝗳', 'g': '𝗴', 'h': '𝗵', 'i': '𝗶', 'j': '𝗷', 'k': '𝗸', 'l': '𝗹', 'm': '𝗺', 'n': '𝗻', 'o': '𝗼', 'p': '𝗽', 'q': '𝗾', 'r': '𝗿', 's': '𝘀', 't': '𝘁', 'u': '𝘂', 'v': '𝘃', 'w': '𝘄', 'x': '𝘅', 'y': '𝘆', 'z': '𝘇',
+        '0': '𝟬', '1': '𝟭', '2': '𝟮', '3': '𝟯', '4': '𝟰', '5': '𝟱', '6': '𝟲', '7': '𝟳', '8': '𝟴', '9': '𝟵'
+    };
+    return text.split('').map(char => boldMap[char] || char).join('');
+};
+
+
 function App() {
   // UI State
   const [activePage, setActivePage] = useState<Page>('generate');
@@ -132,6 +142,7 @@ function App() {
   const [jsonInput, setJsonInput] = useState('');
   const [watermarkText, setWatermarkText] = useState('@mantra.wayfinding');
   const [watermarkPlacement, setWatermarkPlacement] = useState('Bottom - Right');
+  const [aspectRatio, setAspectRatio] = useState('3:4');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +150,12 @@ function App() {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [formattedCaption, setFormattedCaption] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Image Editing State
+  const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
+  const [editPrompt, setEditPrompt] = useState('');
+  const [isEditingImage, setIsEditingImage] = useState(false);
+
 
   // Anti-repetition state, initialized from localStorage
   const [quoteHistory, setQuoteHistory] = useState(() => {
@@ -182,6 +199,8 @@ function App() {
     setOutput(null);
     setGeneratedImageUrl(null);
     setFormattedCaption('');
+    setGeneratedImageBase64(null);
+    setEditPrompt('');
 
     let spec = null;
 
@@ -239,7 +258,7 @@ function App() {
             config: {
                 numberOfImages: 1,
                 outputMimeType: 'image/png',
-                aspectRatio: '3:4',
+                aspectRatio: aspectRatio,
             },
         });
 
@@ -302,13 +321,15 @@ Apply the following styles while adhering strictly to the mandate from Step 2. T
         if (!finalImageBase64) {
             throw new Error('Image composition failed. The model did not return an image.');
         }
-
+        
+        setGeneratedImageBase64(finalImageBase64);
         setGeneratedImageUrl(`data:image/png;base64,${finalImageBase64}`);
         
         // Format the final caption
         const { quote: specQuote, caption, hashtags } = spec;
         const formattedHashtags = hashtags.join(' ');
-        const finalCaption = `${specQuote.text}\n- ${specQuote.author} (${specQuote.source_book})\n\n${caption}\n\n${formattedHashtags}`;
+        const boldQuote = toUnicodeBold(specQuote.text);
+        const finalCaption = `${boldQuote}\n- ${specQuote.author} (${specQuote.source_book})\n\n${caption}\n\n${formattedHashtags}`;
         setFormattedCaption(finalCaption);
 
 
@@ -324,6 +345,53 @@ Apply the following styles while adhering strictly to the mandate from Step 2. T
         setLoadingMessage('');
     }
   };
+
+  const handleEditImage = async () => {
+      if (!generatedImageBase64 || !editPrompt.trim()) {
+        return;
+      }
+      setIsEditingImage(true);
+      setError(null);
+
+      try {
+        const editResponse = await ai.models.generateContent({
+          model: 'gemini-2.5-flash-image-preview',
+          contents: {
+            parts: [
+              { inlineData: { data: generatedImageBase64, mimeType: 'image/png' } },
+              { text: editPrompt },
+            ],
+          },
+          config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+          },
+        });
+
+        let newImageBase64 = '';
+        for (const part of editResponse.candidates[0].content.parts) {
+          if (part.inlineData) {
+            newImageBase64 = part.inlineData.data;
+            break;
+          }
+        }
+
+        if (!newImageBase64) {
+          throw new Error('Image editing failed. The model did not return an image.');
+        }
+
+        setGeneratedImageBase64(newImageBase64);
+        setGeneratedImageUrl(`data:image/png;base64,${newImageBase64}`);
+        setEditPrompt(''); // Clear the prompt after successful edit
+
+      } catch (e) {
+        console.error(e);
+        let friendlyError = `An error occurred during editing: ${e.message}`;
+        setError(friendlyError);
+      } finally {
+        setIsEditingImage(false);
+      }
+    };
+
 
   const handleCopy = (text: string) => {
       navigator.clipboard.writeText(text).then(() => {
@@ -419,6 +487,19 @@ Apply the following styles while adhering strictly to the mandate from Step 2. T
                         </div>
 
                         <div className="control-group">
+                            <h3 className="control-group-title">Image Settings</h3>
+                            <div className="form-group">
+                                <label htmlFor="aspect-ratio">Aspect Ratio</label>
+                                <select id="aspect-ratio" value={aspectRatio} onChange={e => setAspectRatio(e.target.value)}>
+                                    <option value="3:4">3:4 (Portrait)</option>
+                                    <option value="9:16">9:16 (Story / Reel)</option>
+                                    <option value="1:1">1:1 (Square)</option>
+                                    <option value="16:9">16:9 (Landscape)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="control-group">
                             <h3 className="control-group-title">Mode</h3>
                              <div className="radio-group">
                                 {(['AUTO', 'MANUAL', 'JSON'] as Mode[]).map(m => (
@@ -456,7 +537,7 @@ Apply the following styles while adhering strictly to the mandate from Step 2. T
                             )}
                         </div>
                     </div>
-                     <button className="generate-button" onClick={handleGenerate} disabled={isLoading}>
+                     <button className="generate-button" onClick={handleGenerate} disabled={isLoading || isEditingImage}>
                         {isLoading ? 'Generating...' : 'Generate Asset'}
                     </button>
                 </div>
@@ -480,14 +561,40 @@ Apply the following styles while adhering strictly to the mandate from Step 2. T
                     {output && (
                         <div className="generated-content">
                              <div className="result-image-wrapper">
-                                <div className="image-container">
-                                    {generatedImageUrl && <img src={generatedImageUrl} alt={output.alt_text} />}
-                                </div>
-                                {generatedImageUrl && (
-                                    <div className="action-buttons">
-                                        <button className="action-button" onClick={handleViewImage}>View</button>
-                                        <button className="action-button" onClick={handleDownloadImage}>Download</button>
+                                <div className="image-wrapper">
+                                    <div className="image-container" style={{ aspectRatio: aspectRatio.replace(':', ' / ') }}>
+                                        {generatedImageUrl && <img src={generatedImageUrl} alt={output.alt_text} className={isEditingImage ? 'editing' : ''} />}
                                     </div>
+                                    {isEditingImage && (
+                                        <div className="image-loader" role="status" aria-live="polite">
+                                            <div className="spinner"></div>
+                                            <span className="sr-only">Applying edits...</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {generatedImageUrl && (
+                                    <>
+                                        <div className="action-buttons">
+                                            <button className="action-button" onClick={handleViewImage}>View</button>
+                                            <button className="action-button" onClick={handleDownloadImage}>Download</button>
+                                        </div>
+                                        <div className="edit-image-controls">
+                                            <textarea
+                                                placeholder="Describe your edits (e.g., 'add a cat sitting on the wall')"
+                                                value={editPrompt}
+                                                onChange={(e) => setEditPrompt(e.target.value)}
+                                                disabled={isEditingImage}
+                                            />
+                                            <button
+                                                className="edit-button"
+                                                onClick={handleEditImage}
+                                                disabled={isEditingImage || !editPrompt.trim()}
+                                            >
+                                                {isEditingImage ? 'Applying...' : 'Apply Edits'}
+                                            </button>
+                                        </div>
+                                    </>
                                 )}
                             </div>
                             <div className="text-outputs">

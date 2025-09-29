@@ -34,7 +34,7 @@ The application's logic is built on a 3-step pipeline that uses the JSON `spec` 
 ### Step 2: Background Image Generation (The "Canvas")
 -   **Model**: `imagen-4.0-generate-001`
 -   **Process**: The `background.image_prompt` string is extracted from the newly created JSON `spec` and sent to the Imagen model.
--   **Output**: Imagen generates a high-quality, photorealistic 3:4 aspect ratio (1080x1440) background image. The prompt is engineered to ensure this image contains a clear, well-lit surface that is ready to have text composited onto it.
+-   **Output**: Imagen generates a high-quality, photorealistic background image in the user-selected aspect ratio (e.g., 3:4, 9:16, 1:1, 16:9). The prompt is engineered to ensure this image contains a clear, well-lit surface that is ready to have text composited onto it.
 
 ### Step 3: Realistic Text Composition (The "Final Art")
 -   **Model**: `gemini-2.5-flash-image-preview`
