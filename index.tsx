@@ -130,7 +130,7 @@ function App() {
   const [mode, setMode] = useState<Mode>('AUTO');
   const [manualInputs, setManualInputs] = useState({ quote: '', author: '', source: '' });
   const [jsonInput, setJsonInput] = useState('');
-  const [watermarkText, setWatermarkText] = useState('@matra.wayfinding');
+  const [watermarkText, setWatermarkText] = useState('@mantra.wayfinding');
   const [watermarkPlacement, setWatermarkPlacement] = useState('Bottom - Right');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
