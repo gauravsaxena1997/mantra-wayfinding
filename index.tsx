@@ -251,28 +251,31 @@ function App() {
         const { strict_guidelines, background, quote, watermark } = spec;
 
         const compositionPrompt = `
-**CRITICAL INSTRUCTIONS: You MUST follow these rules to create a photorealistic image.**
+You are a highly precise text composition tool. Your primary and most critical task is to render text onto an image with 100% accuracy.
 
-1.  **STRICT GUIDELINES ADHERENCE:**
-    *   **Readability:** "${strict_guidelines.readability}"
-    *   **Integration:** "${strict_guidelines.integration}"
-    *   **Aesthetic:** "${strict_guidelines.aesthetic}"
-    *   **No Distractions:** "${strict_guidelines.distractions}"
+**Step 1: Identify the Source Text.**
+The exact text to render is provided below. This text is the single source of truth. It may contain repeated words or unusual phrasing. This is intentional and must be preserved.
 
-2.  **PHYSICAL SIMULATION (NO FLAT OVERLAYS):**
-    *   **ABSOLUTELY NO "STICKERS" OR FLAT TEXT.** The text must look like a physical part of the surface.
-    *   If the placement is '${background.quotePlacement}', simulate that physical process.
-    *   For **CARVED** or **ENGRAVED** text: It must have visible depth, inner shadows, and highlights consistent with the scene's lighting ('${background.lighting}'). The surface material (e.g., wood grain) must be visible *inside* the letters.
-    *   For **PAINTED** text: It must follow the surface's micro-texture (e.g., brick mortar lines, canvas weave). It should not be perfectly smooth unless the surface is.
-    *   For **PROJECTED** text: It must have soft edges and its brightness must realistically illuminate the surrounding surface.
+- **Source Text:** "${quote.text}"
 
-3.  **COMPOSITION DETAILS:**
-    *   **Font:** Use a font style inspired by: '${background.fontSuggestion}'.
-    *   **Quote Text:** Render this EXACT text: "${quote.text}"
-    *   **Author Text:** DO NOT render the author's name on the image.
-    *   **Watermark:** Add a very small, subtle watermark in the **${watermark.placement}** corner with the text: "${watermark.text}". **IMPORTANT**: The watermark must have a small, visible gap from the image edges to ensure it is not cut off.
+**Step 2: Understand the Critical Mandate: Verbatim Rendering.**
+- You **MUST** render the "Source Text" exactly as it appears above.
+- **DO NOT** alter, add, remove, or "correct" any words, letters, or punctuation.
+- **DO NOT** replace words with synonyms or other words. If the text says "in in", you must render "in in". The words "senua" or "kujesenure" are examples of unacceptable hallucinations and must be avoided.
+- Failure to render the text verbatim is a failure of the entire task.
 
-Return ONLY the final composited image. Failure to follow these rules will result in an unacceptable image.
+**Step 3: Apply Stylistic Properties.**
+Apply the following styles while adhering strictly to the mandate from Step 2. The text's accuracy is more important than the styles.
+- **Placement Method:** Simulate the text being '${background.quotePlacement}'.
+- **Visual Style:** The font should be inspired by '${background.fontSuggestion}'.
+- **Integration:** The text must look physically part of the scene, respecting the scene's lighting ('${background.lighting}'). It should not look like a flat sticker.
+- **Readability:** The text must be clear and easy to read.
+
+**Step 4: Add the Watermark.**
+- **Text:** "${watermark.text}"
+- **Placement:** Small and subtle in the ${watermark.placement} corner, with a small gap from the edges.
+
+**Final Check:** Before outputting the image, confirm that the rendered text is IDENTICAL to the "Source Text" from Step 1.
 `;
         
         const compositionResponse = await ai.models.generateContent({
