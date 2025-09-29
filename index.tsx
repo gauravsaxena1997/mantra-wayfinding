@@ -120,6 +120,15 @@ type Mode = 'AUTO' | 'MANUAL' | 'JSON';
 type Page = 'generate' | 'saved';
 type Theme = 'light' | 'dark';
 
+interface SavedAsset {
+  id: string;
+  imageDataUrl: string;
+  spec: any; // The full JSON spec
+  formattedCaption: string;
+  timestamp: number;
+}
+
+
 const toUnicodeBold = (text: string) => {
     const boldMap: { [key: string]: string } = {
         'A': '𝗔', 'B': '𝗕', 'C': '𝗖', 'D': '𝗗', 'E': '𝗘', 'F': '𝗙', 'G': '𝗚', 'H': '𝗛', 'I': '𝗜', 'J': '𝗝', 'K': '𝗞', 'L': '𝗟', 'M': '𝗠', 'N': '𝗡', 'O': '𝗢', 'P': '𝗣', 'Q': '𝗤', 'R': '𝗥', 'S': '𝗦', 'T': '𝗧', 'U': '𝗨', 'V': '𝗩', 'W': '𝗪', 'X': '𝗫', 'Y': '𝗬', 'Z': '𝗭',
@@ -153,9 +162,13 @@ function App() {
   
   // Image Editing State
   const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
+  const [renderedQuoteText, setRenderedQuoteText] = useState<string | null>(null);
   const [editPrompt, setEditPrompt] = useState('');
   const [isEditingImage, setIsEditingImage] = useState(false);
 
+  // Saved Assets State
+  const [savedAssets, setSavedAssets] = useState<SavedAsset[]>([]);
+  const [viewingAsset, setViewingAsset] = useState<SavedAsset | null>(null);
 
   // Anti-repetition state, initialized from localStorage
   const [quoteHistory, setQuoteHistory] = useState(() => {
@@ -175,6 +188,24 @@ function App() {
     }
   });
 
+  // Effect to load saved assets from localStorage on initial render
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('mantraSavedAssets');
+      if (saved) {
+        setSavedAssets(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error("Failed to load saved assets from localStorage", e);
+    }
+  }, []);
+
+  // Effect to save assets to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('mantraSavedAssets', JSON.stringify(savedAssets));
+  }, [savedAssets]);
+
+
   // Effect to save history to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('mantraQuoteHistory', JSON.stringify(Array.from(quoteHistory)));
@@ -192,6 +223,11 @@ function App() {
     const key = userApiKey.trim() || process.env.API_KEY;
     return new GoogleGenAI({ apiKey: key });
   }, [userApiKey]);
+  
+  const isCurrentAssetSaved = useMemo(() => {
+      if (!output) return false;
+      return savedAssets.some(asset => asset.id === output.spec_id);
+  }, [output, savedAssets]);
 
   const handleGenerate = async () => {
     setIsLoading(true);
@@ -200,6 +236,7 @@ function App() {
     setGeneratedImageUrl(null);
     setFormattedCaption('');
     setGeneratedImageBase64(null);
+    setRenderedQuoteText(null);
     setEditPrompt('');
 
     let spec = null;
@@ -267,34 +304,31 @@ function App() {
         
         setLoadingMessage('Step 3/3: Magically printing the quote onto the scene...');
 
-        const { strict_guidelines, background, quote, watermark } = spec;
+        const { background, quote, watermark } = spec;
 
         const compositionPrompt = `
-You are a highly precise text composition tool. Your primary and most critical task is to render text onto an image with 100% accuracy.
+You are a precision text-on-image rendering engine. Your primary and most critical task is to render the exact text provided onto the image.
 
-**Step 1: Identify the Source Text.**
-The exact text to render is provided below. This text is the single source of truth. It may contain repeated words or unusual phrasing. This is intentional and must be preserved.
+**CRITICAL MANDATE: VERBATIM RENDERING. FAILURE TO FOLLOW IS A TASK FAILURE.**
+You are given "Source Text" below. You MUST render this text onto the image with 100% character-for-character accuracy.
+- **DO NOT** change, add, remove, or "correct" any part of the text. This is not a creative task. It is a technical rendering task.
+- **REPEATED WORDS:** If the text contains repeated words (e.g., "it is what it is"), you MUST render the repeated words. This is a common point of failure. Double-check your output for this specific error. Any deviation from the "Source Text" is a failure.
 
-- **Source Text:** "${quote.text}"
+**SOURCE TEXT TO RENDER (COPY EXACTLY):**
+"${quote.text}"
 
-**Step 2: Understand the Critical Mandate: Verbatim Rendering.**
-- You **MUST** render the "Source Text" exactly as it appears above.
-- **DO NOT** alter, add, remove, or "correct" any words, letters, or punctuation.
-- **DO NOT** replace words with synonyms or other words. If the text says "in in", you must render "in in". The words "senua" or "kujesenure" are examples of unacceptable hallucinations and must be avoided.
-- Failure to render the text verbatim is a failure of the entire task.
-
-**Step 3: Apply Stylistic Properties.**
-Apply the following styles while adhering strictly to the mandate from Step 2. The text's accuracy is more important than the styles.
+**STYLING INSTRUCTIONS:**
+Apply these styles while maintaining 100% text accuracy. Accuracy is more important than styling.
 - **Placement Method:** Simulate the text being '${background.quotePlacement}'.
 - **Visual Style:** The font should be inspired by '${background.fontSuggestion}'.
-- **Integration:** The text must look physically part of the scene, respecting the scene's lighting ('${background.lighting}'). It should not look like a flat sticker.
-- **Readability:** The text must be clear and easy to read.
+- **Integration:** The text must look physically part of the scene, respecting the scene's lighting ('${background.lighting}').
 
-**Step 4: Add the Watermark.**
+**WATERMARK:**
 - **Text:** "${watermark.text}"
-- **Placement:** Small and subtle in the ${watermark.placement} corner, with a small gap from the edges.
+- **Placement:** Small and subtle in the ${watermark.placement} corner.
 
-**Final Check:** Before outputting the image, confirm that the rendered text is IDENTICAL to the "Source Text" from Step 1.
+**OUTPUT REQUIREMENT:**
+Your response MUST include ONLY the final rendered image. Do not include any text.
 `;
         
         const compositionResponse = await ai.models.generateContent({
@@ -306,20 +340,106 @@ Apply the following styles while adhering strictly to the mandate from Step 2. T
                 ],
             },
             config: {
-                responseModalities: [Modality.IMAGE, Modality.TEXT],
+                responseModalities: [Modality.IMAGE],
             },
         });
         
-        let finalImageBase64 = '';
-        for (const part of compositionResponse.candidates[0].content.parts) {
-            if (part.inlineData) {
-                finalImageBase64 = part.inlineData.data;
+        let initialImageBase64 = '';
+        if (compositionResponse.candidates?.[0]?.content?.parts) {
+            for (const part of compositionResponse.candidates[0].content.parts) {
+                if (part.inlineData) {
+                    initialImageBase64 = part.inlineData.data;
+                    break;
+                }
+            }
+        }
+        
+        if (!initialImageBase64) {
+            throw new Error('Initial image composition failed to return an image.');
+        }
+
+        // --- Verification and Correction Loop ---
+        let finalImageBase64 = initialImageBase64;
+        let isVerified = false;
+        const MAX_CORRECTION_ATTEMPTS = 2;
+        const sourceQuote = spec.quote.text;
+        const normalize = (str: string) => (str || '').trim().toLowerCase().replace(/['".,]/g, '');
+        let lastOcrText = '';
+
+        for (let i = 0; i < MAX_CORRECTION_ATTEMPTS; i++) {
+            setLoadingMessage(`Step 3.${i + 1}: Verifying text accuracy...`);
+
+            const ocrResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash-image-preview',
+                contents: {
+                    parts: [
+                        { inlineData: { data: finalImageBase64, mimeType: 'image/png' } },
+                        { text: 'Your only task is to act as an OCR (Optical Character Recognition) tool. Read the quote text inside this image. Return ONLY the text you read, without any surrounding quotes or explanations.' },
+                    ],
+                },
+                config: {
+                    responseModalities: [Modality.TEXT],
+                },
+            });
+
+            const ocrText = ocrResponse.text.trim();
+            lastOcrText = ocrText;
+
+            if (normalize(ocrText) === normalize(sourceQuote)) {
+                setRenderedQuoteText(sourceQuote);
+                isVerified = true;
+                break; // Success! Exit the loop.
+            }
+
+            // If not verified, attempt correction
+            setLoadingMessage(`Step 3.${i + 1}b: Auto-correcting inaccurate text...`);
+            const correctionPrompt = `
+                **CRITICAL CORRECTION TASK**
+                The text rendered on the provided image is INCORRECT. I have verified it myself.
+
+                - **INCORRECT TEXT ON IMAGE:** "${ocrText}"
+                - **CORRECT TEXT THAT SHOULD BE ON IMAGE:** "${sourceQuote}"
+
+                Your task is to replace the incorrect text with the correct text.
+                - The final rendered text MUST be 100% character-for-character identical to the "CORRECT TEXT".
+                - Pay extreme attention to repeated words and punctuation. This is where you failed before.
+                - **DO NOT** change the font, style, placement, or any other aspect of the image. Only fix the text content itself.
+                - Return ONLY the corrected image.
+            `;
+
+            const correctionResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash-image-preview',
+                contents: {
+                    parts: [
+                        { inlineData: { data: finalImageBase64, mimeType: 'image/png' } },
+                        { text: correctionPrompt },
+                    ],
+                },
+                config: {
+                    responseModalities: [Modality.IMAGE],
+                },
+            });
+
+            let correctedImageBase64 = '';
+            if (correctionResponse.candidates?.[0]?.content?.parts) {
+                for (const part of correctionResponse.candidates[0].content.parts) {
+                    if (part.inlineData) {
+                        correctedImageBase64 = part.inlineData.data;
+                        break;
+                    }
+                }
+            }
+
+            if (correctedImageBase64) {
+                finalImageBase64 = correctedImageBase64;
+            } else {
+                // Correction failed to return an image, no point in continuing.
                 break;
             }
         }
 
-        if (!finalImageBase64) {
-            throw new Error('Image composition failed. The model did not return an image.');
+        if (!isVerified) {
+            setRenderedQuoteText(`${lastOcrText} (Correction Failed)`);
         }
         
         setGeneratedImageBase64(finalImageBase64);
@@ -399,19 +519,51 @@ Apply the following styles while adhering strictly to the mandate from Step 2. T
       });
   };
 
+  const handleSaveAsset = () => {
+    if (!output || !generatedImageUrl || !formattedCaption) return;
+    if (isCurrentAssetSaved) return;
+
+    const newAsset: SavedAsset = {
+      id: output.spec_id,
+      imageDataUrl: generatedImageUrl,
+      spec: output,
+      formattedCaption: formattedCaption,
+      timestamp: Date.now(),
+    };
+    setSavedAssets(prevAssets => [newAsset, ...prevAssets]);
+  };
+
+  const handleDeleteAsset = (idToDelete: string) => {
+    if (window.confirm('Are you sure you want to delete this saved asset?')) {
+      setSavedAssets(prevAssets => prevAssets.filter(asset => asset.id !== idToDelete));
+    }
+  };
+
+
   const handleViewImage = () => {
+    setViewingAsset(null);
     setIsModalOpen(true);
+  };
+  
+  const handleViewSavedAsset = (asset: SavedAsset) => {
+    setViewingAsset(asset);
+    setIsModalOpen(true);
+  };
+
+  const downloadDataUrl = (dataUrl: string, fileName: string) => {
+    if (!dataUrl) return;
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleDownloadImage = () => {
     if (generatedImageUrl) {
-        const link = document.createElement('a');
-        link.href = generatedImageUrl;
         const fileName = output?.spec_id ? `mantra_${output.spec_id}.png` : 'mantra_wayfinding.png';
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        downloadDataUrl(generatedImageUrl, fileName);
     }
   };
 
@@ -578,6 +730,9 @@ Apply the following styles while adhering strictly to the mandate from Step 2. T
                                         <div className="action-buttons">
                                             <button className="action-button" onClick={handleViewImage}>View</button>
                                             <button className="action-button" onClick={handleDownloadImage}>Download</button>
+                                            <button className="action-button" onClick={handleSaveAsset} disabled={isCurrentAssetSaved}>
+                                                {isCurrentAssetSaved ? 'Saved ✓' : 'Save'}
+                                            </button>
                                         </div>
                                         <div className="edit-image-controls">
                                             <textarea
@@ -610,6 +765,10 @@ Apply the following styles while adhering strictly to the mandate from Step 2. T
                                 </div>
                                  <div className="generation-parameters">
                                     <h3>Used Parameters</h3>
+                                     <p><strong>Input Quote:</strong> {output.quote.text}</p>
+                                    {renderedQuoteText && (
+                                        <p><strong>Output Quote:</strong> {renderedQuoteText}</p>
+                                    )}
                                     <p><strong>Placement Mode:</strong> {output.background.quotePlacement}</p>
                                     <p><strong>Vibe:</strong> {output.background.vibe}</p>
                                     <p><strong>Scene:</strong> {output.background.scene}</p>
@@ -627,17 +786,63 @@ Apply the following styles while adhering strictly to the mandate from Step 2. T
                 </div>
             </>
         ) : (
-            <div className="placeholder-page">
-                <h2>Saved Assets</h2>
-                <p>This feature will be implemented later.</p>
+            <div className="saved-assets-page">
+                {savedAssets.length === 0 ? (
+                    <div className="placeholder-page">
+                        <h2>No Saved Assets</h2>
+                        <p>Your saved creations will appear here. Go generate some!</p>
+                    </div>
+                ) : (
+                    <div className="saved-assets-grid">
+                        {savedAssets.map(asset => (
+                            <div key={asset.id} className="saved-asset-card">
+                                <img src={asset.imageDataUrl} alt={asset.spec.alt_text} onClick={() => handleViewSavedAsset(asset)} />
+                                <div className="saved-asset-overlay">
+                                    <p className="quote">"{asset.spec.quote.text}"</p>
+                                    <div className="saved-asset-actions">
+                                        <button onClick={() => handleViewSavedAsset(asset)}>View</button>
+                                        <button onClick={() => downloadDataUrl(asset.imageDataUrl, `mantra_${asset.id}.png`)}>Download</button>
+                                        <button onClick={() => handleCopy(asset.formattedCaption)}>Copy Caption</button>
+                                        <button className="delete" onClick={() => handleDeleteAsset(asset.id)}>Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         )}
       </main>
       {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+        <div className="modal-overlay" onClick={() => { setIsModalOpen(false); setViewingAsset(null); }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <button className="modal-close" onClick={() => setIsModalOpen(false)} aria-label="Close" type="button">&times;</button>
-                <img src={generatedImageUrl} alt={output.alt_text} />
+                <button className="modal-close" onClick={() => { setIsModalOpen(false); setViewingAsset(null); }} aria-label="Close" type="button">&times;</button>
+                 {viewingAsset ? (
+                    <div className="modal-detail-view">
+                        <div className="modal-image-container">
+                             <img src={viewingAsset.imageDataUrl} alt={viewingAsset.spec.alt_text} />
+                        </div>
+                        <div className="modal-details text-outputs">
+                             <div className="form-group">
+                                <label>Caption</label>
+                                <button className="copy-button" onClick={() => handleCopy(viewingAsset.formattedCaption)}>Copy</button>
+                                <textarea readOnly value={viewingAsset.formattedCaption}></textarea>
+                            </div>
+                              <div className="form-group">
+                                <label>Alt Text</label>
+                                <button className="copy-button" onClick={() => handleCopy(viewingAsset.spec.alt_text)}>Copy</button>
+                                <textarea readOnly value={viewingAsset.spec.alt_text}></textarea>
+                            </div>
+                             <div className="form-group">
+                                <label>JSON Spec</label>
+                                <button className="copy-button" onClick={() => handleCopy(JSON.stringify(viewingAsset.spec, null, 2))}>Copy</button>
+                                <textarea readOnly value={JSON.stringify(viewingAsset.spec, null, 2)}></textarea>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <img src={generatedImageUrl} alt={output?.alt_text} />
+                )}
             </div>
         </div>
       )}
