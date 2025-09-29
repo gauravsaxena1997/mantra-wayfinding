@@ -361,20 +361,26 @@ Your response MUST include ONLY the final rendered image. Do not include any tex
         // --- Verification and Correction Loop ---
         let finalImageBase64 = initialImageBase64;
         let isVerified = false;
-        const MAX_CORRECTION_ATTEMPTS = 2;
+        const MAX_CORRECTION_ATTEMPTS = 3;
         const sourceQuote = spec.quote.text;
         const normalize = (str: string) => (str || '').trim().toLowerCase().replace(/['".,]/g, '');
         let lastOcrText = '';
 
         for (let i = 0; i < MAX_CORRECTION_ATTEMPTS; i++) {
-            setLoadingMessage(`Step 3.${i + 1}: Verifying text accuracy...`);
+            setLoadingMessage(`Step 3.${i + 1}/${MAX_CORRECTION_ATTEMPTS}: Verifying text accuracy...`);
+
+            const ocrPrompt = `You are a highly accurate OCR (Optical Character Recognition) tool. Your only task is to transcribe the main, large-font quote written on this image.
+- Be 100% literal. Transcribe exactly what you see, character for character.
+- DO NOT add, remove, or correct any words, even if you think there is a mistake.
+- Pay close attention to punctuation.
+- Your entire response must be ONLY the text you read from the image. Do not add any other explanations, formatting, or quotation marks unless they are part of the image text itself.`;
 
             const ocrResponse = await ai.models.generateContent({
                 model: 'gemini-2.5-flash-image-preview',
                 contents: {
                     parts: [
                         { inlineData: { data: finalImageBase64, mimeType: 'image/png' } },
-                        { text: 'Your only task is to act as an OCR (Optical Character Recognition) tool. Read the quote text inside this image. Return ONLY the text you read, without any surrounding quotes or explanations.' },
+                        { text: ocrPrompt },
                     ],
                 },
                 config: {
@@ -392,19 +398,16 @@ Your response MUST include ONLY the final rendered image. Do not include any tex
             }
 
             // If not verified, attempt correction
-            setLoadingMessage(`Step 3.${i + 1}b: Auto-correcting inaccurate text...`);
+            setLoadingMessage(`Step 3.${i + 1}b: Text is inaccurate. Auto-correcting...`);
             const correctionPrompt = `
-                **CRITICAL CORRECTION TASK**
-                The text rendered on the provided image is INCORRECT. I have verified it myself.
+                **URGENT CORRECTION REQUIRED.**
+                The text on this image is WRONG. You must fix it. This is not a creative task.
 
-                - **INCORRECT TEXT ON IMAGE:** "${ocrText}"
-                - **CORRECT TEXT THAT SHOULD BE ON IMAGE:** "${sourceQuote}"
-
-                Your task is to replace the incorrect text with the correct text.
-                - The final rendered text MUST be 100% character-for-character identical to the "CORRECT TEXT".
-                - Pay extreme attention to repeated words and punctuation. This is where you failed before.
-                - **DO NOT** change the font, style, placement, or any other aspect of the image. Only fix the text content itself.
-                - Return ONLY the corrected image.
+                1.  **IDENTIFY & ERASE:** Locate the block of text that currently says: "${ocrText}". Erase this text completely, leaving the original background intact as if the text was never there.
+                2.  **RENDER CORRECT TEXT:** In the exact same location, render the following text with 100% character-for-character accuracy: "${sourceQuote}".
+                3.  **VERBATIM ACCURACY IS MANDATORY:** Pay extreme attention to every single word, especially repeated words. This is a known failure point. The final text MUST match the "RENDER CORRECT TEXT" field exactly.
+                4.  **MAINTAIN STYLE:** Keep the same font, color, lighting, and placement style as the original incorrect text.
+                5.  **OUTPUT:** Your response must contain ONLY the corrected image. Do not add any other text.
             `;
 
             const correctionResponse = await ai.models.generateContent({
@@ -433,13 +436,13 @@ Your response MUST include ONLY the final rendered image. Do not include any tex
             if (correctedImageBase64) {
                 finalImageBase64 = correctedImageBase64;
             } else {
-                // Correction failed to return an image, no point in continuing.
+                 lastOcrText = `Correction step ${i+1} failed to produce an image.`;
                 break;
             }
         }
 
         if (!isVerified) {
-            setRenderedQuoteText(`${lastOcrText} (Correction Failed)`);
+            setRenderedQuoteText(`"${lastOcrText}" (Auto-correction failed)`);
         }
         
         setGeneratedImageBase64(finalImageBase64);
