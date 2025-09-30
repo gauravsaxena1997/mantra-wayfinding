@@ -132,7 +132,7 @@ interface SavedAsset {
 const toUnicodeBold = (text: string) => {
     const boldMap: { [key: string]: string } = {
         'A': '𝗔', 'B': '𝗕', 'C': '𝗖', 'D': '𝗗', 'E': '𝗘', 'F': '𝗙', 'G': '𝗚', 'H': '𝗛', 'I': '𝗜', 'J': '𝗝', 'K': '𝗞', 'L': '𝗟', 'M': '𝗠', 'N': '𝗡', 'O': '𝗢', 'P': '𝗣', 'Q': '𝗤', 'R': '𝗥', 'S': '𝗦', 'T': '𝗧', 'U': '𝗨', 'V': '𝗩', 'W': '𝗪', 'X': '𝗫', 'Y': '𝗬', 'Z': '𝗭',
-        'a': '𝗮', 'b': '𝗯', 'c': '𝗰', 'd': '𝗱', 'e': '𝗲', 'f': '𝗳', 'g': '𝗴', 'h': '𝗵', 'i': '𝗶', 'j': '𝗷', 'k': '𝗸', 'l': '𝗹', 'm': '𝗺', 'n': '𝗻', 'o': '𝗼', 'p': '𝗽', 'q': '𝗾', 'r': '𝗿', 's': '𝘀', 't': '𝘁', 'u': '𝘂', 'v': '𝘃', 'w': '𝘄', 'x': '𝘅', 'y': '𝘆', 'z': '𝘇',
+        'a': '𝗮', 'b': '𝗯', 'c': '𝗰', 'd': '𝗱', 'e': '𝗲', 'f': '𝗳', 'g': '𝗴', 'h': '𝗵', 'i': '𝗶', 'j': '𝗷', 'k': '𝗸', 'l': '𝗹', 'm': '𝗺', 'n': '𝗻', 'o': '𝗼', 'p': '𝗽', 'q': '𝾾', 'r': '𝗿', 's': '𝘀', 't': '𝘁', 'u': '𝘂', 'v': '𝘃', 'w': '𝘄', 'x': '𝘅', 'y': '𝘆', 'z': '𝘇',
         '0': '𝟬', '1': '𝟭', '2': '𝟮', '3': '𝟯', '4': '𝟰', '5': '𝟱', '6': '𝟲', '7': '𝟳', '8': '𝟴', '9': '𝟵'
     };
     return text.split('').map(char => boldMap[char] || char).join('');
@@ -307,28 +307,33 @@ function App() {
         const { background, quote, watermark } = spec;
 
         const compositionPrompt = `
-You are a precision text-on-image rendering engine. Your primary and most critical task is to render the exact text provided onto the image.
+**TASK: RENDER TEXT ON IMAGE, VERBATIM.**
+This is a technical instruction. Do not be creative with the text.
 
-**CRITICAL MANDATE: VERBATIM RENDERING. FAILURE TO FOLLOW IS A TASK FAILURE.**
-You are given "Source Text" below. You MUST render this text onto the image with 100% character-for-character accuracy.
-- **DO NOT** change, add, remove, or "correct" any part of the text. This is not a creative task. It is a technical rendering task.
-- **REPEATED WORDS:** If the text contains repeated words (e.g., "it is what it is"), you MUST render the repeated words. This is a common point of failure. Double-check your output for this specific error. Any deviation from the "Source Text" is a failure.
+**ABSOLUTE MANDATE:** You must render the following text onto the provided image with 100% character-for-character accuracy.
 
-**SOURCE TEXT TO RENDER (COPY EXACTLY):**
-"${quote.text}"
+**SOURCE QUOTE (COPY EXACTLY):**
+"""
+${quote.text}
+"""
 
-**STYLING INSTRUCTIONS:**
-Apply these styles while maintaining 100% text accuracy. Accuracy is more important than styling.
-- **Placement Method:** Simulate the text being '${background.quotePlacement}'.
-- **Visual Style:** The font should be inspired by '${background.fontSuggestion}'.
-- **Integration:** The text must look physically part of the scene, respecting the scene's lighting ('${background.lighting}').
+**INSTRUCTIONS:**
+1.  Read the "SOURCE QUOTE" above.
+2.  Render this exact text onto the image.
+3.  **VERIFY:** Before finalizing, perform a self-check. Does the text on your image match the "SOURCE QUOTE" perfectly?
+4.  **FAILURE CONDITION:** Any deviation, even a single character, from the "SOURCE QUOTE" is a complete failure of this task. If it does not match, you must re-do it until it is a perfect 1:1 match.
 
-**WATERMARK:**
-- **Text:** "${watermark.text}"
-- **Placement:** Small and subtle in the ${watermark.placement} corner.
+**STYLING (Secondary to Accuracy):**
+-   **Placement:** '${background.quotePlacement}'.
+-   **Font Style:** Inspired by '${background.fontSuggestion}'.
+-   **Integration:** Match the scene's lighting ('${background.lighting}').
+-   Accuracy is the #1 priority. If styling conflicts with rendering the text exactly as written, prioritize accuracy.
 
-**OUTPUT REQUIREMENT:**
-Your response MUST include ONLY the final rendered image. Do not include any text.
+**WATERMARK (Secondary Text):**
+-   **Text:** "${watermark.text}"
+-   **Placement:** Small, subtle, in the ${watermark.placement} corner.
+
+**FINAL OUTPUT:** The response must contain ONLY the final rendered image. Do not include any other text, prose, or explanation.
 `;
         
         const compositionResponse = await ai.models.generateContent({
@@ -361,7 +366,7 @@ Your response MUST include ONLY the final rendered image. Do not include any tex
         // --- Verification and Correction Loop ---
         let finalImageBase64 = initialImageBase64;
         let isVerified = false;
-        const MAX_CORRECTION_ATTEMPTS = 3;
+        const MAX_CORRECTION_ATTEMPTS = 4;
         const sourceQuote = spec.quote.text;
         const normalize = (str: string) => (str || '').trim().toLowerCase().replace(/['".,]/g, '');
         let lastOcrText = '';
@@ -400,14 +405,23 @@ Your response MUST include ONLY the final rendered image. Do not include any tex
             // If not verified, attempt correction
             setLoadingMessage(`Step 3.${i + 1}b: Text is inaccurate. Auto-correcting...`);
             const correctionPrompt = `
-                **URGENT CORRECTION REQUIRED.**
-                The text on this image is WRONG. You must fix it. This is not a creative task.
+**TASK: FIX TEXT ON IMAGE.**
+This is a technical bug-fixing instruction.
 
-                1.  **IDENTIFY & ERASE:** Locate the block of text that currently says: "${ocrText}". Erase this text completely, leaving the original background intact as if the text was never there.
-                2.  **RENDER CORRECT TEXT:** In the exact same location, render the following text with 100% character-for-character accuracy: "${sourceQuote}".
-                3.  **VERBATIM ACCURACY IS MANDATORY:** Pay extreme attention to every single word, especially repeated words. This is a known failure point. The final text MUST match the "RENDER CORRECT TEXT" field exactly.
-                4.  **MAINTAIN STYLE:** Keep the same font, color, lighting, and placement style as the original incorrect text.
-                5.  **OUTPUT:** Your response must contain ONLY the corrected image. Do not add any other text.
+---
+**BUG REPORT**
+---
+-   **BUG:** The text on the image is WRONG.
+-   **ACTUAL (INCORRECT) TEXT:** """${ocrText}"""
+-   **EXPECTED (CORRECT) TEXT:** """${sourceQuote}"""
+
+**INSTRUCTIONS:**
+1.  **ERASE:** Find and completely remove the "ACTUAL (INCORRECT) TEXT" from the image.
+2.  **REPLACE:** In the exact same location and style, render the "EXPECTED (CORRECT) TEXT".
+3.  **VERBATIM RULE:** The new text must be a 100% character-for-character match of the "EXPECTED (CORRECT) TEXT".
+4.  **VERIFY:** Before outputting, re-read the text on your generated image. Does it match the "EXPECTED (CORRECT) TEXT"? If not, do it again until it is a perfect match. This is the most important step.
+
+**FINAL OUTPUT:** The response must contain ONLY the corrected image. Do not include any other text.
             `;
 
             const correctionResponse = await ai.models.generateContent({
