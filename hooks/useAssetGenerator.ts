@@ -5,16 +5,22 @@ import { GeminiService } from '../services/gemini';
 import { AssetSpec, Mode } from '../types';
 import { formatCaptionOutput } from '../utils';
 
-export const useAssetGenerator = (userApiKey: string) => {
+export const useAssetGenerator = () => {
     const [mode, setMode] = useState<Mode>('AUTO');
-    const [manualInputs, setManualInputs] = useState({ quote: '', author: '', source: '' });
     const [jsonInput, setJsonInput] = useState('');
     const [aspectRatio, setAspectRatio] = useState('9:16');
-    
+
+    // OUTPUT OPTIONS
+    const [generateImagePrompt, setGenerateImagePrompt] = useState(true);
+    const [generateVideoPrompt, setGenerateVideoPrompt] = useState(true);
+    const [generateCaption, setGenerateCaption] = useState(true);
+    const [generateActualImage, setGenerateActualImage] = useState(true);
+    const [numberOfImages, setNumberOfImages] = useState<1 | 2>(2);
+
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const [error, setError] = useState<string | null>(null);
-    
+
     const [output, setOutput] = useState<AssetSpec | null>(null);
     const [generatedImages, setGeneratedImages] = useState<string[]>([]);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -36,17 +42,21 @@ export const useAssetGenerator = (userApiKey: string) => {
     }, [quoteHistory, authorHistory]);
 
     const pipeline = useMemo(() => {
-        const key = userApiKey.trim() || process.env.API_KEY || '';
+        const key = import.meta.env.VITE_API_KEY || '';
+        if (!key) {
+            console.error("VITE_API_KEY not found in environment variables! Add it to .env file.");
+        }
         return new GenerationPipeline(key);
-    }, [userApiKey]);
-    
+    }, []);
+
     const editingService = useMemo(() => {
-        const key = userApiKey.trim() || process.env.API_KEY || '';
+        const key = import.meta.env.VITE_API_KEY || '';
         return new GeminiService(key);
-    }, [userApiKey]);
+    }, []);
 
     const generateAsset = async () => {
-        console.log(`[UseAssetGenerator] Starting generation. Key Type: ${userApiKey ? "USER PROVIDED" : "SYSTEM SHARED"}`);
+        console.log(`[UseAssetGenerator] Starting generation with .env API key`);
+        console.log(`[Output Options] Image Prompt: ${generateImagePrompt}, Video Prompt: ${generateVideoPrompt}, Caption: ${generateCaption}, Actual Image: ${generateActualImage} (${numberOfImages} variations)`);
 
         setIsLoading(true);
         setError(null);
@@ -57,20 +67,29 @@ export const useAssetGenerator = (userApiKey: string) => {
 
         try {
             const { spec, images } = await pipeline.run(
-                mode, 
-                manualInputs, 
-                jsonInput, 
-                aspectRatio, 
+                mode,
+                { quote: '', author: '', source: '' }, // Not used in current modes
+                jsonInput,
+                aspectRatio,
                 { quotes: quoteHistory, authors: authorHistory },
-                (msg) => setLoadingMessage(msg)
+                (msg) => setLoadingMessage(msg),
+                {
+                    generateImagePrompt,
+                    generateVideoPrompt,
+                    generateCaption,
+                    generateActualImage,
+                    numberOfImages
+                }
             );
 
             setOutput(spec);
             setGeneratedImages(images);
-            setFormattedCaption(formatCaptionOutput(spec));
-            
+            if (spec.caption) {
+                setFormattedCaption(formatCaptionOutput(spec));
+            }
+
             setQuoteHistory(prev => new Set(prev).add(spec.quote.text));
-            setAuthorHistory(prev => [spec.metadata.author, ...prev].slice(10, 10));
+            setAuthorHistory(prev => [spec.metadata.author, ...prev].slice(0, 10));
 
         } catch (e: any) {
             console.error(e);
@@ -106,12 +125,19 @@ export const useAssetGenerator = (userApiKey: string) => {
 
     return {
         mode, setMode,
-        manualInputs, setManualInputs,
         jsonInput, setJsonInput,
         aspectRatio, setAspectRatio,
+
+        // Output options
+        generateImagePrompt, setGenerateImagePrompt,
+        generateVideoPrompt, setGenerateVideoPrompt,
+        generateCaption, setGenerateCaption,
+        generateActualImage, setGenerateActualImage,
+        numberOfImages, setNumberOfImages,
+
         isLoading, loadingMessage, error,
-        output, 
-        generatedImages, 
+        output,
+        generatedImages,
         selectedImageIndex, setSelectedImageIndex,
         formattedCaption,
         isEditingImage,

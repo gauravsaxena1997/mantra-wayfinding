@@ -1,36 +1,55 @@
 
 import { Type } from '@google/genai';
 
-export type Mode = 'AUTO' | 'MANUAL' | 'JSON';
+export type Mode = 'AUTO' | 'JSON_TO_IMAGE';
 export type Page = 'generate' | 'saved';
 export type Theme = 'light' | 'dark';
 
 export interface SavedAsset {
   id: string;
   imageDataUrl: string;
-  spec: AssetSpec; 
+  spec: AssetSpec;
   formattedCaption: string;
   timestamp: number;
 }
 
-// Flattened Spec optimized for Direct Passthrough
+// === STRUCTURED CAPTION ===
+export interface Caption {
+    quote: string;
+    author: string;
+    source: string;
+    description: string;
+    hashtags: string[];
+}
+
+// === ASSET SPECIFICATION ===
+// Note: jsonImagePrompt and jsonVideoPrompt are JSON strings
+// They contain comprehensive structured data but are returned as strings
+// to avoid Gemini's schema complexity limits
 export interface AssetSpec {
     spec_id: string;
     mode: string;
     quote: { text: string };
     metadata: { author: string; source: string };
-    
-    // DIRECT OUTPUTS FOR UI & API
-    jsonImagePrompt: string; // The massive, raw prompt for the Image Model
-    jsonVideoPrompt: string; // The raw prompt for the Video Model
-    
-    caption: string;
-    altText: string;
-    hashtags: string[];
-    
-    // Technical metadata kept for reference if needed
+
+    // OPTIONAL: These come from AI as objects, we stringify them in pipeline
+    // Stored as strings for consistency with image API requirements
+    jsonImagePrompt?: string | null;  // Stringified JSON object
+    jsonVideoPrompt?: string | null;  // Stringified JSON object
+
+    // OPTIONAL STRUCTURED CAPTION OBJECT
+    caption?: Caption | null;
+
+    // OPTIONAL: Only generated when caption is requested
+    altText?: string | null;
+
+    // Technical metadata
     technical_specs: {
         aspect_ratio: string;
         resolution: string;
-    }
+    };
 }
+
+// Type helper for when we parse the JSON strings
+export type ParsedImagePrompt = any; // The parsed JSON structure
+export type ParsedVideoPrompt = any; // The parsed JSON structure

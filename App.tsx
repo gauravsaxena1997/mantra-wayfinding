@@ -11,7 +11,6 @@ import { AssetModal } from './components/AssetModal';
 export default function App() {
     const [activePage, setActivePage] = useState<Page>('generate');
     const [theme, setTheme] = useState<Theme>('dark');
-    const [userApiKey, setUserApiKey] = useState('');
     const [savedAssets, setSavedAssets] = useState<SavedAsset[]>([]);
     const [modalState, setModalState] = useState<{ isOpen: boolean; asset?: SavedAsset }>({ isOpen: false });
 
@@ -24,7 +23,9 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        localStorage.setItem('mantraSavedAssets', JSON.stringify(savedAssets));
+        try {
+            localStorage.setItem('mantraSavedAssets', JSON.stringify(savedAssets));
+        } catch (e) { console.error("Failed to save assets", e); }
     }, [savedAssets]);
 
     // Theme Management
@@ -34,7 +35,7 @@ export default function App() {
         root.classList.add(`theme-${theme}`);
     }, [theme]);
 
-    const generator = useAssetGenerator(userApiKey);
+    const generator = useAssetGenerator();
 
     // Get current selected image
     const currentSelectedImageBase64 = generator.generatedImages[generator.selectedImageIndex];
@@ -68,11 +69,14 @@ export default function App() {
                 {activePage === 'generate' ? (
                     <>
                         <ControlsPanel
-                            userApiKey={userApiKey} setUserApiKey={setUserApiKey}
                             aspectRatio={generator.aspectRatio} setAspectRatio={generator.setAspectRatio}
                             mode={generator.mode} setMode={generator.setMode}
-                            manualInputs={generator.manualInputs} setManualInputs={generator.setManualInputs}
                             jsonInput={generator.jsonInput} setJsonInput={generator.setJsonInput}
+                            generateImagePrompt={generator.generateImagePrompt} setGenerateImagePrompt={generator.setGenerateImagePrompt}
+                            generateVideoPrompt={generator.generateVideoPrompt} setGenerateVideoPrompt={generator.setGenerateVideoPrompt}
+                            generateCaption={generator.generateCaption} setGenerateCaption={generator.setGenerateCaption}
+                            generateActualImage={generator.generateActualImage} setGenerateActualImage={generator.setGenerateActualImage}
+                            numberOfImages={generator.numberOfImages} setNumberOfImages={generator.setNumberOfImages}
                             handleGenerate={generator.generateAsset}
                             isLoading={generator.isLoading}
                             isEditing={generator.isEditingImage}

@@ -9,7 +9,13 @@ export const toUnicodeBold = (text: string): string => {
 };
 
 export const formatCaptionOutput = (spec: any): string => {
-    const boldQuote = toUnicodeBold(spec.quote.text);
-    const formattedHashtags = spec.hashtags.join(' ');
-    return `${boldQuote}\n— ${spec.metadata.author}, ${spec.metadata.source}\n\n${spec.caption}\n\n${formattedHashtags}`;
+    // Return empty string if caption wasn't generated
+    if (!spec.caption) {
+        return '';
+    }
+
+    // caption is now a structured object: { quote, author, source, description, hashtags }
+    const boldQuote = toUnicodeBold(spec.caption.quote);
+    const formattedHashtags = spec.caption.hashtags.join(' ');
+    return `${boldQuote}\n— ${spec.caption.author}, ${spec.caption.source}\n\n${spec.caption.description}\n\n${formattedHashtags}`;
 };

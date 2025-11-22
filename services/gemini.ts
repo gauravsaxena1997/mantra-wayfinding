@@ -2,11 +2,13 @@
 import { GoogleGenAI, Modality, Type } from '@google/genai';
 import { RESPONSE_SCHEMA } from '../constants';
 import { AssetSpec, Mode } from '../types';
-import { 
-    STRICT_GUIDELINES, 
-    PLACEMENT_MODES, 
-    VIDEO_LOGIC, 
-    NO_BORING_SURFACES
+import {
+    STRICT_GUIDELINES,
+    RELATABLE_SCENES,
+    VIDEO_READY_ELEMENTS,
+    SCENARIO_EXAMPLES,
+    WATERMARK_POSITIONING,
+    VIDEO_LOGIC
 } from '../guidelines';
 import { 
     getSystemPrompt, 
@@ -72,11 +74,18 @@ export class GeminiService {
 
     // --- STEP 1: COMBINED PLANNING ---
     async generateAssetPlan(
-        mode: Mode, 
-        inputs: { quote: string; author: string; source: string }, 
-        jsonInput: string, 
+        mode: Mode,
+        inputs: { quote: string; author: string; source: string },
+        jsonInput: string,
         aspectRatio: string,
-        history: { quotes: Set<string>; authors: string[] }
+        history: { quotes: Set<string>; authors: string[] },
+        options: {
+            generateImagePrompt: boolean;
+            generateVideoPrompt: boolean;
+            generateCaption: boolean;
+            generateActualImage: boolean;
+            numberOfImages: 1 | 2;
+        }
     ): Promise<AssetSpec> {
         if (mode === 'JSON') {
             try { return JSON.parse(jsonInput); } 
@@ -84,10 +93,18 @@ export class GeminiService {
         }
 
         const ratioDesc = this.getAspectRatioDescription(aspectRatio);
-        const systemPrompt = getSystemPrompt(STRICT_GUIDELINES, PLACEMENT_MODES, VIDEO_LOGIC, NO_BORING_SURFACES);
-        const userPrompt = getCombinedPlanPrompt(mode, inputs, ratioDesc, history);
+        const systemPrompt = getSystemPrompt(
+            STRICT_GUIDELINES,
+            RELATABLE_SCENES,
+            VIDEO_READY_ELEMENTS,
+            SCENARIO_EXAMPLES,
+            WATERMARK_POSITIONING,
+            VIDEO_LOGIC
+        );
+        const userPrompt = getCombinedPlanPrompt(mode, inputs, ratioDesc, history, options);
 
         console.log("=== [STEP 1] INPUT PROMPT TO TEXT MODEL ===");
+        console.log(`[Generating] Image Prompt: ${options.generateImagePrompt}, Video Prompt: ${options.generateVideoPrompt}, Caption: ${options.generateCaption}`);
         console.log(userPrompt);
 
         const response = await this.ai.models.generateContent({
@@ -109,17 +126,18 @@ export class GeminiService {
         return JSON.parse(response.text);
     }
 
-    // --- STEP 2: GENERATE FINAL ASSET (Direct Passthrough) ---
-    async generateFinalAsset(rawPrompt: string, aspectRatio: string): Promise<string> {
-        // We do NOT modify the prompt here. We trust the "Plan" phase.
-        
-        console.log("=== [STEP 2] FINAL RAW PROMPT TO IMAGE MODEL ===");
-        console.log(rawPrompt);
-        console.log("================================================");
+    // --- STEP 2: GENERATE FINAL ASSET (Direct String Prompt) ---
+    async generateFinalAsset(jsonPromptString: string, aspectRatio: string): Promise<string> {
+        // jsonPromptString is already a string containing JSON structure
+        // We pass it directly to the image model
+
+        console.log("=== [STEP 2] JSON IMAGE PROMPT TO IMAGE MODEL ===");
+        console.log(jsonPromptString);
+        console.log("==================================================");
 
         const response = await this.ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
-            contents: { parts: [{ text: rawPrompt }] },
+            contents: { parts: [{ text: jsonPromptString }] },
             config: {
                 // We add aspect ratio here as a fail-safe, but the prompt should also contain it.
                 imageConfig: { aspectRatio: aspectRatio },

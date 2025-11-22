@@ -115,28 +115,34 @@ export const OutputPanel = ({
                         )}
                     </div>
                     <div className="text-outputs">
-                         <div className="form-group">
-                            <label>Caption</label>
-                            <button className="copy-button" onClick={() => handleCopy(formattedCaption)}>Copy</button>
-                            <textarea id="caption-output" readOnly value={formattedCaption}></textarea>
-                        </div>
+                         {formattedCaption && (
+                             <div className="form-group">
+                                <label>Caption</label>
+                                <button className="copy-button" onClick={() => handleCopy(formattedCaption)}>Copy</button>
+                                <textarea id="caption-output" readOnly value={formattedCaption}></textarea>
+                            </div>
+                         )}
                           <div className="form-group">
                             <label>Alt Text</label>
                             <button className="copy-button" onClick={() => handleCopy(output.altText)}>Copy</button>
                             <textarea readOnly value={output.altText} style={{minHeight: '80px'}}></textarea>
                         </div>
-                        
+
                         <div className="spec-panels">
-                             <div className="form-group spec-panel">
-                                <label>jsonImagePrompt (Raw)</label>
-                                <button className="copy-button" onClick={() => handleCopy(output.jsonImagePrompt)}>Copy</button>
-                                <textarea className="code-output" readOnly value={output.jsonImagePrompt}></textarea>
-                            </div>
-                            <div className="form-group spec-panel">
-                                <label>jsonVideoPrompt (Raw)</label>
-                                <button className="copy-button" onClick={() => handleCopy(output.jsonVideoPrompt)}>Copy</button>
-                                <textarea className="code-output" readOnly value={output.jsonVideoPrompt}></textarea>
-                            </div>
+                             {output.jsonImagePrompt && output.jsonImagePrompt.trim() !== '' && output.jsonImagePrompt !== '""' && (
+                                 <div className="form-group spec-panel">
+                                    <label>jsonImagePrompt (JSON)</label>
+                                    <button className="copy-button" onClick={() => handleCopy(output.jsonImagePrompt)}>Copy</button>
+                                    <textarea className="code-output" readOnly value={output.jsonImagePrompt}></textarea>
+                                </div>
+                             )}
+                            {output.jsonVideoPrompt && output.jsonVideoPrompt.trim() !== '' && output.jsonVideoPrompt !== '""' && (
+                                <div className="form-group spec-panel">
+                                    <label>jsonVideoPrompt (JSON)</label>
+                                    <button className="copy-button" onClick={() => handleCopy(output.jsonVideoPrompt)}>Copy</button>
+                                    <textarea className="code-output" readOnly value={output.jsonVideoPrompt}></textarea>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
